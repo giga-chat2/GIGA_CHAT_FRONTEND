@@ -338,9 +338,29 @@ main.sign-up-mode .carousel {
   /* margin-left: 10%; */
 }
 .submit-chat-form{
+  display: flex;
   width: 100% !important;
   height: 100% !important;
   margin: none;
+}
+
+@keyframes float1 {
+	0% {
+		box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+		transform: translatey(0px);
+	}
+	50% {
+		box-shadow: 0 25px 15px 0px rgba(0,0,0,0.2);
+		transform: translatey(-20px);
+	}
+	100% {
+		box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+		transform: translatey(0px);
+	}
+}
+.clickHereAnimation1{
+  transform: translatey(0px);
+	animation: float1 2s ease-in-out infinite;
 }
 
 .searchResults {
@@ -393,12 +413,12 @@ main.sign-up-mode .carousel {
   animation: slideOut 0.5s ease-in forwards;
 }
 
-.bubble {
+.bubble1 {
   --r: 20px; /* the radius */
   --t: 10px; /* the size of the tail */
 
   
-  max-width: 300px;
+  max-width: 350px;
   padding: calc(2*var(--r)/3);
   -webkit-mask: 
     radial-gradient(var(--t) at var(--_d) 0,#0000 98%,#000 102%) 
@@ -409,14 +429,15 @@ main.sign-up-mode .carousel {
       0 0/var(--r) var(--r) space padding-box;
   /* background: linear-gradient(135deg,#FE6D00,#1384C5) border-box; */
   color: #fff;
+  margin-top: auto;
 }
-.left {
+.left1 {
   --_d: 0%;
   border-left: var(--t) solid #0000;
   margin-right: var(--t);
   place-self: start;
 }
-.right {
+.right1 {
   /* margin-right: 0px !important; */
   /* border:"1px solid white "!important; */
   --_d:   100%;

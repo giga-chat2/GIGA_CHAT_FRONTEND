@@ -21,6 +21,11 @@ import { RefObject } from 'react';
 import axios from 'axios';
 import OpenAI from "openai";
 import ForumIcon from '@mui/icons-material/Forum';
+import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
+import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
+import StraightIcon from '@mui/icons-material/Straight';
+import { useRouter } from 'next/navigation'
+
 
 
 export const PopUpCover: React.FC = () => {
@@ -56,6 +61,9 @@ export const InitialPopUp: React.FC = () => {
     const [isPopUpVisible, setIsPopUpVisible] = useCookies(['isPopUpVisible'])
     const [loading, setLoading] = useState<boolean>(false)
     const dispatch = useDispatch<AppDispatch>()
+    const [emailCookie, setEmailCookie] = useCookies(['email']);
+
+
 
 
     let inputs = null
@@ -114,11 +122,14 @@ export const InitialPopUp: React.FC = () => {
     const [username, setUsername] = useState<string>("")
     const [phone, setPhone] = useState<string>("")
     const [email, setEmail] = useState<string>("")
+    const [currentUser, setCurrentUser] = useCookies(['username'])
+
 
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setLoading(true)
+        setCurrentUser('username', username, { path: '/' })
         try {
 
             const res = await fetch('http://localhost:4000/enterDetails', {
@@ -126,7 +137,7 @@ export const InitialPopUp: React.FC = () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, username, phone, email, password: currentPassword, provider: cookies.provider })
+                body: JSON.stringify({ name, username, phone, email: emailCookie.email, password: currentPassword, provider: cookies.provider })
             }).then((res) => {
                 if (res?.status === 200) {
                     dispatch(setVisiblePopUp(false))
@@ -315,81 +326,157 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
     }, [ref, handler]);
 };
 
+function getCookieValue(cookieName: string) {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(cookieName + '=')) {
+            return cookie.substring(cookieName.length + 1);
+        }
+    }
+    return null;
+}
+
+const sock = io('http://localhost:5000', {
+    auth: {
+        token: getCookieValue('username'),
+    }
+})
+
+
+export const addToOnlineUsers = async (status: boolean, username: string) => {
+    if (status) {
+        try {
+            socket.emit('online', username)
+            const response = await fetch('http://localhost:4000/addToOnlineUsers', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: username })
+            })
+        } catch (e) { console.log(e) }
+    }
+}
+
+export const removeFromOnlineUsers = async (status: boolean, username: string) => {
+    try {
+        socket.emit('remove_online', username)
+        const response = await fetch('http://localhost:4000/removeFromOnlineUsers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username: username })
+        })
+    } catch (e) { console.log(e) }
+
+}
+
 export const MainComponent: React.FC = () => {
     const [results, setResults] = useState<object>()
     const [displaySearchResults, setDisplaySearchResults] = useState<boolean>(false)
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [searchResults, setSearchResults] = useState([]);
-    const [selectedUser, setSelectedUser] = useState<User[]>([]);
+    const [selectedUser, setSelectedUser] = useState<User[] | undefined>();
     const [typedMessage, setTypedMessage] = useState<string>('')
     const [userClicked, setUserClicked] = useState<number | null>(null)
     const [emailCookie, setEmailCookie] = useCookies(['email' as string])
     const [messages, setMessages] = useState<object[]>([])
-    const [isPopUpVisible, setIsPopUpVisible] = useCookies(['isPopUpVisible']);
     const [currentUser, setCurrentUser] = useCookies(['username'])
     const [profilePicPath, setProfilePicPath] = useCookies(['profilePicPath'])
     const [recievedMessage, setRecievedMessage] = useState<string>('')
     const [isChatWindowVisible, setIsChatWindowVisible] = useState<boolean | null>(null)
-    const [currentUserName, setCurrentUserName] = useState<string>('')
+    const [currentUserName, setCurrentUserName] = useState()
     const [index, setIndex] = useState<number>(0)
     const [roomId, setRoomId] = useState<string>('')
+    const [roomID,setRoomID]=useCookies(['roomID'])
     const [placeholderVal, setPlaceholderVal] = useState("Enter your message and hit 'Enter'")
-
     const [openAiChats, setOpenAiChats] = useState<object[]>([{ role: "system", content: "You are a helpful assistant , that responds on behalf of the user based on the past conversation . Just make a logical guess what could user might say next and just give that as an output . If the newest role is user then just provide the follow-up sentence that the user might say and if the newest role is assistant then just provide the response to it as an output" }])
-    const socket = io('http://localhost:5000')
+    const [selectedOnlineUsers, setSelectedOnlineUsers] = useState<string[]>([])
+    const [handleNewComingUser, setHandleNewComingUser] = useState<object>()
+    const [voiceNote, setVoiceNote] = useState<any>()
+    const [aiSuggestions, setAiAuggestions] = useCookies(['aiSuggestions'])
+    const [dispStatus, setDispStatus] = useCookies(['dispStatus'])
+    const [mobileView, setMobileView] = useCookies(['mobileView'])
+    const [socket, setSocket] = useState<any>(sock)
+
+    useEffect(() => {
+        if (handleNewComingUser) {
+            setSelectedUser((prevSelectedUser) => [handleNewComingUser, ...prevSelectedUser])
+        }
+    }, [handleNewComingUser])
 
     useEffect(() => {
         if (socket) {
-            if (!socket.hasListeners('receiveMessage')) {
-
-                socket.on('receiveMessage', (data) => {
+            if (!socket.hasListeners('receive_Message')) {
+                socket.on('receive_Message', (data) => {
+                    // fetchInitialData()
                     if (data.email !== emailCookie.email) {
                         setRecievedMessage(data.message)
-                        // setOpenAiChats(])
                     }
                 })
             }
+            socket.on("onlineUsers", (data) => {
+                setSelectedOnlineUsers((prevOnlineUsers) => [...prevOnlineUsers, data])
+            })
+            socket.on("remove_online", (data) => {
+                setSelectedOnlineUsers((prevOnlineUsers) => prevOnlineUsers.filter((user) => user !== data))
+            })
 
-            socket.on("checkRoomId", (data) => {
-                console.log(data)
+            socket.on('is_new_user_message', (data) => {
+                if (data.selectedUserName === currentUser?.username) {
+
+                    setHandleNewComingUser(data.currentUser)
+                }
+            })
+
+            socket.on('receive_voice_message', (data) => {
+                setVoiceNote(data.audioURL)
+            })
+
+            socket.on("check_RoomId", (data) => {
                 const { room_Id, sender, receiver } = data;
-                console.log(room_Id, sender, receiver)
                 if (roomId !== room_Id) {
                     if (selectedUser) {
-                        console.log(1, receiver, currentUser?.username)
                         if (receiver === currentUser?.username) {
-                            console.log(2)
                             if (selectedUser.find((user) => user?.username === sender?.username)) {
                                 setRoomId(room_Id)
-                                socket.emit("joinRoom", room_Id);
+                                socket.emit("join_Room", room_Id);
                             } else {
-                                console.log(3)
                                 setRoomId(room_Id)
-                                socket.emit("joinRoom", room_Id);
+                                socket.emit("join_Room", room_Id);
                                 handleSearchResultClicked(sender, room_Id)
-                                // handleUserClick(0)
-
                             }
                         }
-                        // const isRoomIdPresent = selectedUser.find((user) => user.roomId == room_Id);
-                        // if (isRoomIdPresent) {
-                        //     setRoomId(room_Id)
-                        //     socket.emit("joinRoom", room_Id);
-                        // }
                     }
 
                 }
             })
+            socket.on('newOnlineUsers', (data) => {
+                const { onlineUsers } = data;
+                setSelectedOnlineUsers(onlineUsers)
+            })
         }
 
-        return () => { socket.off('checkRoomId'); }
+        return () => {
+            if (!socket.connected) {
+                removeFromOnlineUsers(dispStatus.dispStatus, currentUser?.username)
+            }
+            socket.off('check_RoomId');
+        }
     }, [socket]);
+
+    useEffect(() => {
+        setMessages((prevMessages) => [{ audioURL: voiceNote, isSender: false }, ...prevMessages])
+    }, [voiceNote])
+
     const [count, setCount] = useState(0)
     function removeApiKey(obj, count) {
         if (count === 10) {
             return
         } else {
-            console.log(count)
+            return
         }
         for (const key in obj) {
             if (typeof obj[key] === 'object') {
@@ -401,46 +488,47 @@ export const MainComponent: React.FC = () => {
 
     }
 
-    const openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
-    useEffect(() => {
-        // removeApiKey(openai,0)
-        console.log(openai)
-    }, [])
+    var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
 
     const handleAiSuggestion = async (role: string, msg: string) => {
-        try {
-
-            const completion = await openai.chat.completions.create({
-                messages: [...openAiChats, { role: role, content: msg }],
-                model: "gpt-3.5-turbo",
-            });
-            setPlaceholderVal(completion?.choices[0]?.message?.content)
-        }
-        catch (e) {
+        if (aiSuggestions.aiSuggestions) {
             try {
-                const openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
+
                 const completion = await openai.chat.completions.create({
                     messages: [...openAiChats, { role: role, content: msg }],
                     model: "gpt-3.5-turbo",
                 });
-                setPlaceholderVal(completion.choices[0].message.content)
-            } catch (e) {
-                console.log(e)
+                setPlaceholderVal(completion?.choices[0]?.message?.content)
             }
+            catch (e) {
+                try {
+                    openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
+                    const completion = await openai.chat.completions.create({
+                        messages: [...openAiChats, { role: role, content: msg }],
+                        model: "gpt-3.5-turbo",
+                    });
+                    setPlaceholderVal(completion.choices[0].message.content)
+                } catch (e) {
+                    console.log(e)
+                }
+            }
+        } else {
+            setPlaceholderVal('Enter your message and hit "Enter"')
         }
-
-
     }
-
+    const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
     useEffect(() => {
-        handleAiSuggestion("assistant", "Provide response for this : " + recievedMessage)
+        if (firstTimeLoaded) {
+            handleAiSuggestion("assistant", "Provide response for this : " + recievedMessage)
+        } else {
+            setFirstTimeLoaded(true)
+        }
         if (recievedMessage !== '' && messages) {
             setMessages((prevMessages) => [{ message: recievedMessage, isSender: false }, ...prevMessages])
             setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
         } else {
             setMessages([{ message: recievedMessage, isSender: false }])
             setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
-            // setOpenAiChats([{ role: "assistant", content: recievedMessage }])
         }
     }, [recievedMessage]);
 
@@ -453,28 +541,34 @@ export const MainComponent: React.FC = () => {
                 },
                 body: JSON.stringify({ email: emailCookie?.email })
             }).then(res => res.json()).then(data => {
-                const filteredData = data?.usernames.filter((item: any) => item.email !== emailCookie.email);
-                setResults(filteredData)
-                const array = filteredData.map((item: any) => item.username)
-                setSelectedUser(data.selectedUsers)
                 setCurrentUserName(data.currentUser)
+                setAiAuggestions('aiSuggestions', data.currentUser?.aiSuggestions, { path: '/' })
+                setDispStatus('dispStatus', data.currentUser?.dispStatus, { path: '/' })
+                const filteredData = data?.usernames.filter((item: any) => item.email !== emailCookie.email);
+                const selectedUsernames = data.selectedUsers.map((user: any) => user.username);
+                const finalFilteredData = filteredData.filter((item: any) => !selectedUsernames.includes(item.username));
+                setResults(finalFilteredData);
+                const array = filteredData.map((item: any) => item.username)
+                setSelectedUser(data.selectedUsers.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime)));
+                let arr = data.selectedUsers.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime))
+                handleUserClick(0, arr[0]?.username)
+                setSelectedOnlineUsers(data.onlineUsers)
                 setProfilePicPath('profilePicPath', data?.currentUser?.profilePic, { path: '/' })
                 setCurrentUser('username', data.currentUser?.username, { path: '/' })
+                if (socket) {
+                    socket.emit('online', currentUser?.username)
+                    addToOnlineUsers(dispStatus.dispStatus, currentUser?.username)
+                }
             })
         } catch (e) {
             console.log(e)
         }
     }
 
-
     useEffect(() => {
-        // if (!isPopUpVisible.isPopUpVisible) {
         fetchInitialData()
-        // console.log(profilePicPath)
         setIsChatWindowVisible(true);
-        // }
-    }, [])
-
+    }, [emailCookie])
 
     const fuse = new Fuse(results, {
         includeScore: true,
@@ -504,8 +598,19 @@ export const MainComponent: React.FC = () => {
         }
     };
 
+
     const handleSearchResultClicked = async (result: object, room_ID?: string) => {
+
         setDisplaySearchResults(false)
+        const isResultAlreadySelected = selectedUser?.some(
+            (user) => user._id === result._id
+        );
+        if (!selectedUser) {
+            setSelectedUser([result])
+        }
+        else if (selectedUser?.length > 0 && !isResultAlreadySelected) {
+            setSelectedUser([result, ...selectedUser])
+        }
         setSearchTerm('')
         let room_ka_ID = nanoid()
         if (room_ID) {
@@ -513,7 +618,6 @@ export const MainComponent: React.FC = () => {
         } else {
             setRoomId(room_ka_ID)
         }
-        console.log(selectedUser, result, roomId)
         try {
             const res = await fetch('http://localhost:4000/addUserInSelectedUsers', {
                 method: 'POST',
@@ -523,9 +627,14 @@ export const MainComponent: React.FC = () => {
                 body: JSON.stringify({ email: emailCookie.email, selectedUser: result, roomId: room_ID ? room_ID : room_ka_ID })
             }).then((res) => {
                 if (res?.status === 200) {
-                    console.log('User added to the selected users list successfully.')
+                    if (socket) {
+                        currentUserName.roomId = room_ka_ID
+                        socket.emit("new_user_message", { currentUser: currentUserName, selectedUserName: result?.username, roomId: room_ka_ID })
+
+                    }
+
                 } else if (res?.status === 400) {
-                    console.log('Selected user is already present in the list.')
+                    return
                 }
 
             })
@@ -533,41 +642,39 @@ export const MainComponent: React.FC = () => {
             console.log("Eerror aaya")
         }
 
-        const isResultAlreadySelected = selectedUser?.some(
-            (user) => user._id === result._id
-        );
-        console.log(isResultAlreadySelected, selectedUser, result)
-        if (!selectedUser) {
-            console.log("called heere")
-            setSelectedUser([result])
-        }
-        else if (selectedUser?.length > 0 && !isResultAlreadySelected) {
-            setSelectedUser([result, ...selectedUser])
-        }
-    }
 
-    const handleUserClick = async (index: number) => {
+
+    }
+    const handleUserClick = async (index: number, initialSelectedUserName: any = null) => {
         setHandleSelectedUserClicked(true)
         setIndex(index)
         setMessages([])
         setIsChatWindowVisible(true);
         setUserClicked(index);
-        setRoomId(selectedUser[index]?.roomId)
+        if(roomID.roomID && roomID.roomID != '' ){
+            console.log("roomID",roomID.roomID)
+            if(socket){
+                socket.emit('leave_Room', {room_Id: roomID.roomID, username: currentUser?.username})
+            }
+        }
+        if(selectedUser){
+            setRoomId(selectedUser[index]?.roomId)
+            setRoomID('roomID',selectedUser[index]?.roomId,{path:'/'})
+        }
         const res = await axios.post('http://localhost:4000/getChats', {
             currentUser: currentUser?.username,
-            selectedUser: selectedUser[index]?.username,
+            selectedUser: initialSelectedUserName ? initialSelectedUserName : selectedUser[index]?.username,
         })
         let response = res.data
         setMessages(response.chats)
-        console.log(1, response)
+        setRoomId(response?.roomId)
         if (socket) {
-            socket.emit("joinRoom", response?.roomId);
-            socket.emit("sendRoomId", {
-                roomId: response?.roomId,
-                sender: currentUser,
-                receiver: selectedUser,
-            });
-            console.log(2)
+            socket.emit("join_Room",{username :currentUser.username ,room_Id: response?.roomId});
+            // socket.emit("send_RoomId", {
+            //     roomId: response?.roomId,
+            //     sender: currentUser,
+            //     receiver: selectedUser,
+            // });
         }
 
     }
@@ -577,6 +684,7 @@ export const MainComponent: React.FC = () => {
         setTypedMessage('')
         setPlaceholderVal('')
         handleAiSuggestion("user", "Provide follow up :" + typedMessage)
+
         const res = await fetch('http://localhost:4000/addChat', {
             method: 'POST',
             headers: {
@@ -598,7 +706,7 @@ export const MainComponent: React.FC = () => {
 
 
         if (socket) {
-            socket.emit("sendMessage", { message: typedMessage, room_Id: roomId, email: emailCookie.email });
+            socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email });
         }
     }
 
@@ -657,6 +765,7 @@ export const MainComponent: React.FC = () => {
                         icon: "success",
                         title: "User Archieved Successfully!"
                     });
+                    handleUserClick(0)
                 }
             })
         } catch (e) {
@@ -667,39 +776,51 @@ export const MainComponent: React.FC = () => {
     const [handleSelectedUserClicked, setHandleSelectedUserClicked] = useState<boolean>(false)
 
     const handleUserDelete = async () => {
-        try {
-            const res = await fetch('http://localhost:4000/deleteUser', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username: currentUser?.username, selectedUser: selectedUser[index]?.username })
-            }).then((res) => {
-                if (res?.status === 200) {
-                    setMessages([])
-                    // setIsChatWindowVisible(false);
-                    const updatedSelectedUsers = selectedUser.filter((user, idx) => idx !== index)
-                    setSelectedUser(updatedSelectedUsers)
-                    const Toast = Swal.mixin({
-                        toast: true,
-                        position: "top-end",
-                        showConfirmButton: false,
-                        timer: 1000,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.onmouseenter = Swal.stopTimer;
-                            toast.onmouseleave = Swal.resumeTimer;
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch('http://localhost:4000/deleteUser', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username: currentUser?.username, selectedUser: selectedUser[index]?.username })
+                    }).then((res) => {
+                        if (res?.status === 200) {
+                            setMessages([])
+                            // setIsChatWindowVisible(false);
+                            const updatedSelectedUsers = selectedUser.filter((user, idx) => idx !== index)
+                            setSelectedUser(updatedSelectedUsers)
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: "top-end",
+                                showConfirmButton: false,
+                                timer: 1000,
+                                timerProgressBar: true,
+                                didOpen: (toast) => {
+                                    toast.onmouseenter = Swal.stopTimer;
+                                    toast.onmouseleave = Swal.resumeTimer;
+                                }
+                            });
+                            Toast.fire({
+                                icon: "success",
+                                title: "User Deleted Successfully!"
+                            });
                         }
-                    });
-                    Toast.fire({
-                        icon: "success",
-                        title: "User Deleted Successfully!"
-                    });
+                    })
+                } catch (e) {
+                    console.log(e)
                 }
-            })
-        } catch (e) {
-            console.log(e)
-        }
+            }
+        })
     }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -710,193 +831,398 @@ export const MainComponent: React.FC = () => {
         }
     };
 
+    const [is_recording, setIsRecording] = useState(false)
+    const audioChunks = React.useRef<any[]>([])
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null)
+    async function startRec() {
+        setIsRecording(true)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mediaRecorder = new MediaRecorder(stream)
+        mediaRecorder.start()
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                audioChunks.current.push(e.data)
+            }
+        }
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks.current, { type: 'audio/ogg' })
+            const audioFile = new File([audioBlob], 'audio.ogg', { type: 'audio/ogg' });
+
+            const formData = new FormData();
+            formData.append('audio', audioFile);
+            formData.append('roomId', roomId);
+            formData.append('sender', currentUser.username);
+            // formData.append('audioURL',audioURL)
+            if (selectedUser) {
+                formData.append('receiver', selectedUser[index]?.username);
+            }
+            try {
+                const response = await axios.post('http://localhost:4000/uploadAudio', formData)
+                const data = response.data;
+                const audioURL = data.audioURL;
+                setMessages((prevMessages) => [{ audioURL: audioURL, isSender: true }, ...prevMessages])
+                if (socket) {
+                    socket.emit('voice_message', { audioURL: audioURL, roomId, sender: currentUser.username });
+                }
+
+            } catch (e) {
+                console.log(e)
+            }
+        }
+        mediaRecorderRef.current = mediaRecorder
+    }
+    function stopRec() {
+        setIsRecording(false)
+        audioChunks.current = []
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop()
+        }
+    }
+
+
+    const router = useRouter()  
+
+    const redirectToUserPageMobile = async(index) => {
+        if(socket){
+            socket.emit('join_Room',{room_Id: selectedUser[index].roomId,username:currentUser.username})
+        }
+        router.push(`allchats/${selectedUser[index].roomId}/${selectedUser[index].username}`)
+
+    }
 
 
 
 
     return (
         <>
-            <Drawer
-                open={isOpen}
-                onClose={() => setIsOpen(false)}
-                direction='right'
-                className='drawer'
-                style={{ width: "25vw", backgroundColor: "#1e232c" }}
-            >
-                <div className='absolute top-0 right-0 w-[40px] h-[30px] cursor-pointer z-50 border border-white flex justify-center items-center ' onClick={() => setIsOpen(false)} ><CloseIcon style={{ width: "80%", height: "80%", color: "white", cursor: "pointer" }} /></div>
-                <div className='w-[100%] h-[40%] relative border-b border-white flex justify-center items-center' >
-                    <div className='w-[200px] h-[200px] rounded-full border border-white overflow-hidden ' >
-                        {selectedUser && selectedUser[index]?.profilePic ? <><img
-                            src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
-                            alt="profile"
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        /></> : <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />}
-                    </div>
-                </div>
-                {selectedUser ? <>
-                    <div className='w-[100%] h-[20%] flex flex-col justify-center items-center '>
-                        <div className='w-[100%] h-[40%] flex  items-center' >
-                            <p className='text-white   ml-5 ' ><strong> Name : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.name}</p>
-                        </div>
-                        <div className='w-[100%] h-[40%] flex items-center' >
-                            <p className='text-white  ml-5 ' ><strong> Username : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.username}</p>
-                        </div>
-                    </div>
-                    <div className='w-[100%] h-[20%] flex flex-col justify-center items-center' >
-                        <div className='w-[100%] h-[20%] justify-center items-center border-y border-white text-center ' ><p className='text-white font-semibold ' > Get in touch</p>  </div>
-                        <div className='w-[100%] h-[80%] flex flex-col justify-center items-center'>
-                            <div className='w-[100%] h-[50%] flex justify-startitems-center mt-5'>
-                                <p className='ml-5 text-white' ><strong>Email : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.email} </p>
-                            </div>
-                            <div className='w-[100%] h-[50%] flex justify-start   items-center' >
-                                <p className='ml-5 text-white'><strong>Phone : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.phoneno} </p>
+            {!mobileView.mobileView ? <>
+                {selectedUser && selectedUser.length > 0 ? <>
+                    <Drawer
+                        open={isOpen}
+                        onClose={() => setIsOpen(false)}
+                        direction='right'
+                        className='drawer'
+                        style={{ width: "25vw", backgroundColor: "#1e232c" }}
+                    >
+                        <div className='absolute top-0 right-0 w-[40px] h-[30px] cursor-pointer z-50 border border-white flex justify-center items-center ' onClick={() => setIsOpen(false)} ><CloseIcon style={{ width: "80%", height: "80%", color: "white", cursor: "pointer" }} /></div>
+                        <div className='w-[100%] h-[40%] relative border-b border-white flex justify-center items-center' >
+                            <div className='w-[200px] h-[200px] rounded-full border border-white overflow-hidden ' >
+                                {selectedUser && selectedUser[index]?.profilePic ? <><img
+                                    src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                                    alt="profile"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                /></> : <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />}
                             </div>
                         </div>
-                    </div>
-                    <div className='w-[100%] h-[20%] flex flex-col justify-center items-center border-t border-white ' >
-                        <div className='w-[100%] h-[50%] flex justify-start items-center' >
-                            <p className='ml-5 text-white'><strong>Joined GIGA-CHAT on : </strong></p><p className='ml-3 font-thin text-white' >{new Date(selectedUser[index]?.createdAt).getDate()}/{new Date(selectedUser[index]?.createdAt).getMonth() + 1}/{new Date(selectedUser[index]?.createdAt).getFullYear()} </p>
-                        </div>
-                    </div>
-                </> : <></>}
+                        {selectedUser ? <>
+                            <div className='w-[100%] h-[20%] flex flex-col justify-center items-center '>
+                                <div className='w-[100%] h-[40%] flex  items-center' >
+                                    <p className='text-white   ml-5 ' ><strong> Name : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.name}</p>
+                                </div>
+                                <div className='w-[100%] h-[40%] flex items-center' >
+                                    <p className='text-white  ml-5 ' ><strong> Username : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.username}</p>
+                                </div>
+                            </div>
+                            <div className='w-[100%] h-[20%] flex flex-col justify-center items-center' >
+                                <div className='w-[100%] h-[20%] justify-center items-center border-y border-white text-center ' ><p className='text-white font-semibold ' > Get in touch</p>  </div>
+                                <div className='w-[100%] h-[80%] flex flex-col justify-center items-center'>
+                                    <div className='w-[100%] h-[50%] flex justify-startitems-center mt-5'>
+                                        <p className='ml-5 text-white' ><strong>Email : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.email} </p>
+                                    </div>
+                                    <div className='w-[100%] h-[50%] flex justify-start   items-center' >
+                                        <p className='ml-5 text-white'><strong>Phone : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.phoneno} </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className='w-[100%] h-[20%] flex flex-col justify-center items-center border-t border-white ' >
+                                <div className='w-[100%] h-[50%] flex justify-start items-center' >
+                                    <p className='ml-5 text-white'><strong>Joined GIGA-CHAT on : </strong></p><p className='ml-3 font-thin text-white' >{new Date(selectedUser[index]?.createdAt).getDate()}/{new Date(selectedUser[index]?.createdAt).getMonth() + 1}/{new Date(selectedUser[index]?.createdAt).getFullYear()} </p>
+                                </div>
+                            </div>
+                        </> : <></>}
 
-            </Drawer>
-            {contextMenu.show && <div className={`absolute z-50 bg-black border border-white w-[200px] h-[150px] flex flex-col justify-center items-center rounded-md`} ref={contextMenuRef} onClick={handleContextMenuClose} style={{ top: contextMenu.y, left: contextMenu.x }} >
-                <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-b border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={() => setIsOpen(true)} >
-                    <PersonRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
-                    <p className='ml-3 text'>View Profile</p>
-                </div>
-                <div className={`w-[100%] h-[34%] flex justify-start cursor-pointer items-center border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserDelete} >
-                    <DeleteIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
-                    <p className='ml-3 text' >Delete User</p>
-                </div>
-                <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-t border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserArchive} >
-                    <ArchiveRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
-                    <p className='ml-3 text'>Archive User</p>
-                </div>
-
-            </div>}
-            <div className='w-[85vw] h-screen flex flex-row overflow-x-hidden overflow-y-hidden'>
-                <div className='w-[20vw] min-w-[20vw] h-[100%] relative '>
-                    <div className='w-[100%] h-[90%] relative'>
-                        <div className='w-[100%] h-[7%] mt-6 flex justify-center items-center  p-1'>
-                            <ForumIcon sx={{ color: "#fff", width: "20%", height: "70%",padding:"0",marginBottom: "1%" }} />
-                            <p className='w-[100%] h-[90%] text-xl font-semibold text-white ' >All Chats</p>
+                    </Drawer>
+                    {contextMenu.show && <div className={`absolute z-50 bg-black border border-white w-[200px] h-[150px] flex flex-col justify-center items-center rounded-md`} ref={contextMenuRef} onClick={handleContextMenuClose} style={{ top: contextMenu.y, left: contextMenu.x }} >
+                        <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-b border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={() => setIsOpen(true)} >
+                            <PersonRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
+                            <p className='ml-3 text'>View Profile</p>
                         </div>
-                        <div className='w-[100%] h-[7%] flex justify-center items-center p-1'>
-                            <input
-                                type="text"
-                                placeholder='Search your contact...'
-                                className='w-[100%] h-[100%] text-center rounded bg-[#1e232c] text-white border border-none focus:border-none outline-none '
-                                value={searchTerm}
-                                onChange={handleSearch}
-                            />
+                        <div className={`w-[100%] h-[34%] flex justify-start cursor-pointer items-center border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserDelete} >
+                            <DeleteIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
+                            <p className='ml-3 text' >Delete User</p>
                         </div>
-                        <div className='w-[100%]  h-[100%] overflow-y-scroll searchResults '>
-                            {displaySearchResults ? <>
-                                <div className=' flex flex-col items-center w-[100%] h-[fit-content]  border-b border-white relative z-10'>
-                                    {searchResults.length > 0 && searchResults.map((result, index) => (
-                                        <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onClick={() => handleSearchResultClicked(result)} >
-                                            <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
-                                                <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
-                                                    {result?.profilePic ? <><img
-                                                        src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
-                                                        alt="profile"
-                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                    /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+                        <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-t border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserArchive} >
+                            <ArchiveRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
+                            <p className='ml-3 text'>Archive User</p>
+                        </div>
 
+                    </div>}
+                    <div className='w-[85vw] h-screen flex flex-row overflow-x-hidden overflow-y-hidden'>
+                        <div className='w-[20vw] min-w-[20vw] h-[100%] relative '>
+                            <div className='w-[100%] h-[90%] relative'>
+                                <div className='w-[100%] h-[7%] mt-6 flex justify-center items-center  p-1'>
+                                    <ForumIcon sx={{ color: "#fff", width: "20%", height: "70%", padding: "0", marginBottom: "1%" }} />
+                                    <p className='w-[100%] h-[90%] text-xl font-semibold text-white ' >All Chats</p>
+                                </div>
+                                <div className='w-[100%] h-[7%] flex justify-center items-center p-1'>
+                                    <input
+                                        type="text"
+                                        placeholder='Search your contact...'
+                                        className='w-[100%] h-[100%] text-center rounded bg-[#1e232c] text-white border border-none focus:border-none outline-none '
+                                        value={searchTerm}
+                                        onChange={handleSearch}
+                                    />
+                                </div>
+                                <div className='w-[100%]  h-[100%] overflow-y-scroll searchResults '>
+                                    {displaySearchResults ? <>
+                                        <div className=' flex flex-col items-center w-[100%] h-[fit-content]  border-b border-white relative z-10'>
+                                            {searchResults.length > 0 && searchResults.map((result, index) => (
+                                                <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onClick={() => handleSearchResultClicked(result)} >
+                                                    <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                                        <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                            {result?.profilePic ? <><img
+                                                                src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
+                                                                alt="profile"
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                            /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+
+                                                        </div>
+                                                    </div>
+                                                    <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
+                                                        <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{result.username}</p>
+                                                        <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.name}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </> : <>
+
+                                    </>}
+                                    <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
+                                        {selectedUser && selectedUser.length > 0 ? selectedUser?.map((user, idx) => (
+                                            <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => handleUserClick(idx)} >
+                                                <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
+                                                    <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                                        <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                            {user?.profilePic ? <><img
+                                                                src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
+                                                                alt="profile"
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                            /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+
+                                                        </div>
+                                                    </div>
+                                                    <div className='relative w-[50%] h-[100%] border-none text-white rounded-e-sm '>
+                                                        <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={idx}>{user?.username}</p>
+                                                        <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={idx}>{user?.name}</p>
+                                                    </div>
+                                                    <div className='relative w-[20%] h-[100%] flex justify-center items-center text-white rounded-e-sm '>
+                                                        <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
-                                                <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{result.username}</p>
-                                                <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.name}</p>
+                                        )) : <>
+                                            <div className='w-[80%] flex justify-center items-center text-white h-[20%] clickHereAnimation1 ' >
+                                                <StraightIcon sx={{ color: "white", width: "30%", height: "80%" }} /> Click here to search your contacts
+                                            </div>
+                                        </>}
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        {selectedUser && selectedUser.length > 0 ?
+                            <>
+                                <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
+                                    <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
+                                        <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
+
+                                            {messages && messages.length > 0 && messages.map((msg, idx) => (
+                                                <div key={idx} className={`w-[450px] mb-20 border-none h-[150px] flex mt-2 ${msg.isSender ? 'ml-auto sender' : ''}`}>
+                                                    {msg.isSender ? (
+                                                        <>
+                                                            <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0 ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble1 right1' : 'bg-[#1e232c] rounded-e bubble1 left1'} text-white flex flex-col`}>
+                                                                {msg.audioURL ? (
+                                                                    <audio controls src={msg.audioURL} id={idx} >
+                                                                        <source src={msg.audioURL} />
+                                                                        Your browser does not support the audio element.
+                                                                    </audio>
+                                                                ) : (
+                                                                    <>
+                                                                        {msg.message.includes('http://localhost:3000/pages/room/') ? (
+                                                                            <>
+                                                                                {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                                                <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>{msg.message}</>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                            <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex justify-end'>
+                                                                {profilePicPath.profilePicPath !== "undefined" ? (
+                                                                    <img
+                                                                        src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
+                                                                        alt="profile"
+                                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                                    />
+                                                                ) : (
+                                                                    <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {handleSelectedUserClicked ? (
+                                                                <>
+                                                                    <div className='rounded-full border-none flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto]'>
+                                                                        {selectedUser && selectedUser[index]?.profilePic ? (
+                                                                            <img
+                                                                                src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                                                                                alt="profile"
+                                                                                style={{ width: "100%", marginTop: "auto", height: "100%", objectFit: "cover" }}
+                                                                            />
+                                                                        ) : (
+                                                                            <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className={`w-[fit-content] h-[fit-content] mt-2 font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble1 right1' : 'bg-[#1e232c] rounded-e bubble1 left1'} text-white p-[1.5%] flex font-semibold`}>
+                                                                        {msg.audioURL ? (
+                                                                            <audio src={msg.audioURL} controls>
+                                                                                <source src={msg.audioURL} type="audio/wav" />
+                                                                                Your browser does not support the audio element.
+                                                                            </audio>
+                                                                        ) : (
+                                                                            <>
+                                                                                {msg.message.includes('http://localhost:3000/pages/room/') ? (
+                                                                                    <>
+                                                                                        {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                                                        <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <>{msg.message}</>
+                                                                                )}
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <></>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            ))}
+
+
+
+                                        </div>
+                                    </div>
+                                    <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
+
+                                        <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
+                                            <form onSubmit={onChatSubmit} className='submit-chat-form' >
+                                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
+                                                <input type="submit" className='hidden w-[0%] h-[0%]' />
+                                            </form>
+                                        </div>
+                                        <div className='w-[10%] h-[100%] flex justify-center items-center' >
+                                            <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
+                                                {/* <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRecording} onMouseUp={stopRecordingAndSend}>
+                                                {isMediaRecorderReady ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                            </div> */}
+                                                <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
+                                                    {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                                </div>
                                             </div>
                                         </div>
-                                    ))}
+                                    </div>
+
                                 </div>
                             </> : <>
+                                <div className='flex flex-col w-[100%] h-screen  justify-center items-center ' >
+                                    <img src="/images/no_users_found.png" className='w-[70%] h-[85%]  ' alt="" />
 
+                                </div>
                             </>}
-                            <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
-                                {selectedUser && selectedUser?.map((user, idx) => (
-                                    <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => handleUserClick(idx)} >
-                                        <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
-                                            <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
-                                                <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
-                                                    {user.profilePic ? <><img
-                                                        src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
-                                                        alt="profile"
-                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                    /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
 
-                                                </div>
+                    </div>
+                </> : <></>}
+            </> : <>
+                <div className='w-[100%] h-[90%] flex flex-col justify-center items-center ' >
+                    <div className='w-[100%] h-[5%] flex justify-center items-center ' >
+                        <ForumIcon sx={{ color: "#fff", width: "20%", height: "100%", marginBottom: 'auto', padding: "0" }} />
+                        <p className='w-[100%] h-[90%] text-xl font-semibold text-white ' >All Chats</p>
+                    </div>
+                    <div className='w-[100%] h-[10%] p-3  flex justify-center items-center ' >
+                        <input
+                            type="text"
+                            placeholder='Search your contact...'
+                            className='w-[100%] h-[100%] text-center rounded bg-[#1e232c] text-white border border-none focus:border-none outline-none '
+                            value={searchTerm}
+                            onChange={handleSearch}
+                        />
+                    </div>
+                    <div className='w-[100%] h-[85%] p-3 flex flex-col justify-start items-center overflow-y-scroll  ' >
+                        {displaySearchResults ? <>
+                            <div className=' flex flex-col items-center w-[100%] h-[fit-content]  border-b border-white relative z-10'>
+                                {searchResults.length > 0 && searchResults.map((result, index) => (
+                                    <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onClick={() => handleSearchResultClicked(result)} >
+                                        <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                            <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                {result?.profilePic ? <><img
+                                                    src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
+                                                    alt="profile"
+                                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+
                                             </div>
-                                            <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
-                                                <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={idx}>{user.username}</p>
-                                                <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={idx}>{user.name}</p>
-                                            </div>
+                                        </div>
+                                        <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
+                                            <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{result.username}</p>
+                                            <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.name}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-
-                    </div>
-                </div>
-                <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
-                    <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
-                        <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
-
-                            {messages && messages.length > 0 && messages.map((msg, idx) => (
-                                <div className={`w-[350px] border-none h-[80px] flex mt-2 ${msg.isSender ? ' ml-auto sender' : ''} `} >
-                                    {msg.isSender ? <>
-                                        <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0  ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex flex-col  `}>
-                                            {msg.message}
-                                        </div>
-                                        <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex justify-end ' >
-                                            {profilePicPath.profilePicPath !== "undefined" ? <>
-                                                <img
-                                                    src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
+                        </> : <></> }
+                        <div className='flex flex-col items-center w-[100%] relative z-10 mt-1 h-[95%] overflow-y-scroll' >
+                            {selectedUser && selectedUser.length > 0 ? selectedUser?.map((user, idx) => (
+                                <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={()=>redirectToUserPageMobile(idx)} >
+                                    <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
+                                        <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                            <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                {user?.profilePic ? <><img
+                                                    src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
                                                     alt="profile"
                                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                />
-                                            </> : <>
-                                                <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
-                                            </>}
-                                        </div>
+                                                /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
 
-                                    </> : <>
-                                        {handleSelectedUserClicked ? <>
-                                            <div className='rounded-full border-none flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto] ' >
-                                                {selectedUser && selectedUser[index]?.profilePic ? <><img
-                                                    src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
-                                                    alt="profile"
-                                                    style={{ width: "100%", marginTop: "auto", height: "100%", objectFit: "cover" }}
-                                                /></> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
-                                                }
                                             </div>
-                                            <div className={`w-[fit-content] h-[fit-content] mt-2 font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>{msg.message}</div>
-                                        </> : <></>}
-                                    </>}
-
+                                        </div>
+                                        <div className='relative w-[50%] h-[100%] border-none text-white rounded-e-sm '>
+                                            <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={idx}>{user?.username}</p>
+                                            <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={idx}>{user?.name}</p>
+                                        </div>
+                                        <div className='relative w-[20%] h-[100%] flex justify-center items-center text-white rounded-e-sm '>
+                                            <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
-
-
+                            )) : <>
+                                <div className='w-[80%] flex justify-center items-center text-white h-[20%] clickHereAnimation1 ' >
+                                    <StraightIcon sx={{ color: "white", width: "30%", height: "80%" }} /> Click here to search your contacts
+                                </div>
+                            </>}
                         </div>
-                    </div>
 
-                    <div className='flex justify-center items-center w-[100%] h-[15%] relative '>
-                        <div className='flex flex-center justify-center items-center relative w-[90%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
-                            <form onSubmit={onChatSubmit} className='submit-chat-form' >
-                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
-                                <input type="submit" className='hidden w-[0%] h-[0%]' />
-                            </form>
-                        </div>
+                        
                     </div>
 
                 </div>
-            </div>
+            </>}
         </>
+
     )
 }

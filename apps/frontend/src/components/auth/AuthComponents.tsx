@@ -14,10 +14,14 @@ import { setProvider } from '@/redux/features/provider-slice';
 import { setCurrentPassword } from '@/redux/features/password-slice';
 import { setVisiblePopUp } from '@/redux/features/intialPopUp-slice';
 import { useAppSelector } from '@/redux/store';
-import {useCookies} from 'react-cookie'
+import { useCookies } from 'react-cookie'
+import axios from 'axios'
+import setInitialData from '@/redux/features/initialData-slice';
+import { useSession } from 'next-auth/react';
 
 
 export const MoveToSignInButton: React.FC = () => {
+
     return (
         <>
             <button className="btn" id="sign-in-btn" onClick={() => document.querySelector(".container")?.classList.remove("sign-up-mode")}>
@@ -43,9 +47,27 @@ export const SignInForm: React.FC = () => {
     const [disp, setDisp] = useState<boolean>(false)
     const { push } = useRouter();
     const dispatch = useDispatch<AppDispatch>()
-    const [isPopUpVisible,setIsPopUpVisible] = useCookies(['isPopUpVisible']);
-    const [emailCookie,setEmailCookie] = useCookies(['email']);
+    const [isPopUpVisible, setIsPopUpVisible] = useCookies(['isPopUpVisible']);
+    const [emailCookie, setEmailCookie] = useCookies(['email']);
     const [cookies, setCookie] = useCookies(['provider']);
+
+    const [mobileView, setMobileView] = useCookies(['mobileView'])
+
+    const checkMobileView = () => {
+        if (window.innerWidth <= 768) {
+            setMobileView('mobileView', true, { path: '/' })
+        } else {
+            setMobileView('mobileView', false, { path: '/' })
+        }
+    }
+
+    useEffect(() => {
+        checkMobileView()
+        window.addEventListener('resize', checkMobileView)
+        return () => {
+            window.removeEventListener('resize', checkMobileView)
+        }
+    }, [])
 
 
     const handleSignIn = (e: FormEvent<HTMLFormElement>) => {
@@ -66,10 +88,11 @@ export const SignInForm: React.FC = () => {
                     console.log(res)
                     // dispatch(setUsedProviderAuth(false))
                     // dispatch(setCurrentEmail(email))
-                    setEmailCookie('email',email,{path:'/'})
+                    setEmailCookie('email', email, { path: '/' })
                     dispatch(setCurrentPassword(password))
                     setIsPopUpVisible('isPopUpVisible', false, { path: '/' });
-                    push('/pages/allchats');
+                    // push('/pages/allchats');
+                    window.location.href = '/pages/allchats'
 
                 }
                 else if (res.status == 400) {
@@ -99,11 +122,12 @@ export const SignInForm: React.FC = () => {
         }
 
     }
+
     useEffect(() => {
         setDisp(true)
     }, [])
 
-    const handleSocialSignIn = (provider: string) => {
+    const handleSocialSignIn = async (provider: string) => {
         setCookie('provider', provider, { path: '/' });
         setIsPopUpVisible('isPopUpVisible', false, { path: '/' });
         signIn(provider, { callbackUrl: "/pages/allchats" })
@@ -122,28 +146,31 @@ export const SignInForm: React.FC = () => {
                         <i className="fas fa-lock" />
                         <input type="password" placeholder="Enter your password" value={password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} />
                     </div>
-                    <input type="submit" defaultValue="Login" id='login_btn' className="btn" />
+                    <input type="submit" defaultValue="Login" value="Login" id='login_btn' className="btn" />
+                    {mobileView.mobileView ? <a href="#" id="sign-up-btn2" className='italic' onClick={() => document.querySelector(".container")?.classList.add("sign-up-mode")} >Don't have an account?</a> : <></>}
                     <p className="social-text">Or Sign in with social platform</p>
                     <div className="social-media">
                         <a className="social-icon" id="facebookIcon">
                             <i className="fab fa-facebook-f" />
                         </a>
-                        <a className="social-icon" id="twitterIcon" onClick={() => handleSocialSignIn('twitter') }>
+                        <a className="social-icon" id="twitterIcon" onClick={() => handleSocialSignIn('twitter')}>
                             <i className="fa-brands fa-x-twitter" />
                         </a>
-                        <a className="social-icon" id="googleIcon" onClick={() => handleSocialSignIn('google') }>
+                        <a className="social-icon" id="googleIcon" onClick={() => handleSocialSignIn('google')}>
                             <i className="fab fa-google" />
                         </a>
-                        <a className="social-icon" id='GitHubIcon' onClick={() => handleSocialSignIn('github') }>
+                        <a className="social-icon" id='GitHubIcon' onClick={() => handleSocialSignIn('github')}>
                             <i className="fa-brands fa-github"></i>
                         </a>
                     </div>
-                    <p className="account-text">
-                        Don't have an account?{" "}
-                        <a href="#" id="sign-up-btn2">
-                            Sign up
-                        </a>
-                    </p>
+                    {!mobileView.mobileView ?
+                        <p className="account-text">
+                            Don't have an account?{" "}
+                            <a href="#" id="sign-up-btn2">
+                                Sign up
+                            </a>
+                        </p> : <></>
+                    }
                 </form>
             </> : <></>}
         </>
@@ -161,8 +188,10 @@ export const SignUpForm = () => {
     const [verificationCode, setVerificationCode] = useState<string>('')
     const [disp, setDisp] = useState<boolean>(false)
     const [cookies, setCookie] = useCookies(['provider']);
-    const [isPopUpVisible,setIsPopUpVisible] = useCookies(['isPopUpVisible']);
-    const [emailCookie,setEmailCookie] = useCookies(['email']);
+    const [isPopUpVisible, setIsPopUpVisible] = useCookies(['isPopUpVisible']);
+    const [emailCookie, setEmailCookie] = useCookies(['email']);
+    const [mobileView, setMobileView] = useCookies(['mobileView'])
+
     useEffect(() => {
         setDisp(true)
     }, [])
@@ -174,13 +203,6 @@ export const SignUpForm = () => {
         setLoading(true)
 
         if (!dispCodeDiv) {
-
-            const CustomToast = () => (
-                <div className='bg-black text-white text-center ' >
-                    <div className='bg-black' >Verification Code sent to your email!</div>
-                </div>
-            );
-
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             if (!emailRegex.test(email)) {
                 Swal.fire({
@@ -199,6 +221,11 @@ export const SignUpForm = () => {
                 });
                 return
             }
+            const CustomToast = () => (
+                <div className='bg-black text-white text-center ' >
+                    <div className='bg-black' >Verification Code sent to your email!</div>
+                </div>
+            );
 
             try {
                 const res = await fetch("http://localhost:4000/register", {
@@ -222,7 +249,7 @@ export const SignUpForm = () => {
                         setLoading(false);
                         toast(<CustomToast />, {
                             position: 'top-right',
-                            autoClose: 5000,
+                            autoClose: 100000,
                             hideProgressBar: false,
                             closeOnClick: true,
                             pauseOnHover: true,
@@ -283,10 +310,12 @@ export const SignUpForm = () => {
                     if (res.status == 200) {
                         dispatch(setUsedProviderAuth(false))
                         // dispatch(setCurrentEmail(email))
-                        setEmailCookie('email',email,{path:'/'})
+                        setIsPopUpVisible('isPopUpVisible', true, { path: '/' });
+                        setEmailCookie('email', email, { path: '/' })
                         console.log(password)
                         dispatch(setCurrentPassword(password))
                         push('/pages/allchats');
+
                     }
                 })
             } catch (error) {
@@ -317,12 +346,14 @@ export const SignUpForm = () => {
         };
     }, []);
 
+
     const handleSocialSignIn = (provider: string) => {
         // dispatch(setProvider(provider))
         setCookie('provider', provider, { path: '/' });
         setIsPopUpVisible('isPopUpVisible', true, { path: '/' });
         signIn(provider, { callbackUrl: "/pages/allchats" })
     }
+
 
     return (
         <>
@@ -367,19 +398,20 @@ export const SignUpForm = () => {
                         </div>
                     </div>
 
-                    <input type="submit" defaultValue={loading ? loading && dispCodeDiv ? "Verfying..." : "Sending Code..." : dispCodeDiv ? "Verify Code" : "Get Code"} id='register_btn' className="btn" />
+                    <input type="submit" value={loading ? loading && dispCodeDiv ? "Verfying..." : "Sending Code..." : dispCodeDiv ? "Verify Code" : "Get Code"} id='register_btn' className="btn" />
+                    {mobileView.mobileView ? <a href="#" id="sign-up-btn2" className='italic' onClick={() => document.querySelector(".container")?.classList.remove("sign-up-mode")} >Already have an account?</a> : <></>}
                     <p className="social-text">Or Sign in with social platform</p>
                     <div className="social-media">
                         <a className="social-icon" id="facebookIcon">
                             <i className="fab fa-facebook-f" />
                         </a>
-                        <a className="social-icon" id="twitterIcon" onClick={() => handleSocialSignIn('twitter') }>
+                        <a className="social-icon" id="twitterIcon" onClick={() => handleSocialSignIn('twitter')}>
                             <i className="fa-brands fa-x-twitter" />
                         </a>
-                        <a className="social-icon" id="googleIcon" onClick={() => handleSocialSignIn('google') } >
+                        <a className="social-icon" id="googleIcon" onClick={() => handleSocialSignIn('google')} >
                             <i className="fab fa-google" />
                         </a>
-                        <a className="social-icon" id='GitHubIcon' onClick={() => handleSocialSignIn('github') }>
+                        <a className="social-icon" id='GitHubIcon' onClick={() => handleSocialSignIn('github')}>
                             <i className="fa-brands fa-github"></i>
                         </a>
                     </div>

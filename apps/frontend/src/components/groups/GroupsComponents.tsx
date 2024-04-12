@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Fuse from 'fuse.js';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useCookies } from 'react-cookie'
@@ -15,11 +15,19 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import Drawer from 'react-modern-drawer'
 import CloseIcon from '@mui/icons-material/Close';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
-
-type User = {
-    username: string,
-    name: string
-}
+import axios from 'axios';
+import Avatar from '@mui/material/Avatar';
+import AvatarGroup from '@mui/material/AvatarGroup';
+import StraightIcon from '@mui/icons-material/Straight';
+import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
+import OpenAI from "openai";
+import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import EditIcon from '@mui/icons-material/Edit';
+import NotificationAddIcon from '@mui/icons-material/NotificationAdd';
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
+import AddReactionIcon from '@mui/icons-material/AddReaction';
 
 type Event = MouseEvent | TouchEvent;
 
@@ -47,12 +55,14 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
 };
 
 
+const socket = io('http://localhost:5000')
+
 export const MainComponent: React.FC = () => {
     const [results, setResults] = useState<object>()
     const [displaySearchResults, setDisplaySearchResults] = useState<boolean>(false)
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [searchResults, setSearchResults] = useState([]);
-    const [selectedUser, setSelectedUser] = useState<User[]>([]);
+    const [selectedUser, setSelectedUser] = useState<object[]>([]);
     const [typedMessage, setTypedMessage] = useState<string>('')
     const [emailCookie, setEmailCookie] = useCookies(['email' as string])
     const [messages, setMessages] = useState<object[]>([])
@@ -60,12 +70,11 @@ export const MainComponent: React.FC = () => {
     const [recievedMessage, setRecievedMessage] = useState<string>('')
     const [isChatWindowVisible, setIsChatWindowVisible] = useState<boolean | null>(null)
     const [roomId, setRoomId] = useState<string>('')
-
-    const socket = io('http://localhost:4000')
     const [userClicked, setUserClicked] = useState<number | null>(null)
     const [dispCreateGroupPopUp, setDispCreateGroupPopUp] = useState<boolean | null>(null)
     const [options, setOptions] = useState([])
     const [currentUser, setCurrentUser] = useState<object>()
+    const [currentUserName, setCurrentUserName] = useCookies(['username'])
     const [selectedGroupMembers, setSelectedGroupMembers] = useState<object[]>([])
     const [groupName, setGroupName] = useState<string>('')
     const [admins, setAdmins] = useState<object[]>([])
@@ -73,14 +82,23 @@ export const MainComponent: React.FC = () => {
     const [profilePicPath, setProfilePicPath] = useCookies(['profilePicPath'])
     const [sender, setSender] = useState<string>('')
     const [senderProfilePic, setSenderProfilePic] = useState<string>('')
+    const [placeholderVal, setPlaceholderVal] = useState("Enter your message and hit 'Enter'")
+    const [openAiChats, setOpenAiChats] = useState<object[]>([{ role: "system", content: "You are a helpful assistant , that responds on behalf of the user based on the past conversation . Just make a logical guess what could user might say next and just give that as an output . If the newest role is user then just provide the follow-up sentence that the user might say and if the newest role is assistant then just provide the response to it as an output" }])
+    const [voiceNote, setVoiceNote] = useState<any>()
+    const [aiSuggestions, setAiAuggestions] = useCookies(['aiSuggestions'])
+    const [dispStatus, setDispStatus] = useCookies(['dispStatus'])
+    const [idx, setIdx] = useState<number>(0)
+    // const [groupRoomIdCookie, setGroupRoomIdCookie] = useCookies(['groupRoomId'])
+    const [roomID, setRoomID] = useCookies(['roomID'])
 
 
     useEffect(() => {
         if (socket) {
-            if (!socket.hasListeners('receiveMessage')) {
+            if (!socket.hasListeners('receive_Message')) {
 
-                socket.on('receiveMessage', (data) => {
-                    if (data.email !== emailCookie.email) {
+                socket.on('receive_Message', (data) => {
+                    console.log(data.email, emailCookie.email, data.roomId, "HUHU", roomID.roomID)
+                    if (data.roomId === roomID.roomID) {
                         console.log("inside")
                         setRecievedMessage(data.message)
                         setSender(data.user)
@@ -88,14 +106,20 @@ export const MainComponent: React.FC = () => {
                     }
                 })
             }
+            socket.on('receive_voice_message', (data) => {
+                console.log(data)
+                setSender(data.user)
+                setSenderProfilePic(data.profilePic)
+                setVoiceNote(data.audioURL)
+            })
 
-            socket.on("checkRoomId", (data) => {
+            socket.on("check_RoomId", (data) => {
                 const { room_Id, email } = data;
                 if (email !== emailCookie.email) {
                     const isRoomIdPresent = selectedUser.find((user) => user.roomId == room_Id);
                     if (isRoomIdPresent) {
                         setRoomId(room_Id)
-                        socket.emit("joinRoom", room_Id);
+                        socket.emit("join_Room", { room_Id: room_Id, username: currentUser.username });
                     }
                 }
             })
@@ -105,9 +129,56 @@ export const MainComponent: React.FC = () => {
     }, [socket]);
 
     useEffect(() => {
-        if (recievedMessage !== '') {
-            setMessages((prevMessages) => [{ message: recievedMessage, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
+        if (voiceNote) {
+            setMessages((prevMessages) => [{ audioURL: voiceNote, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
         }
+    }, [voiceNote])
+
+    var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
+
+    const handleAiSuggestion = async (role: string, msg: string) => {
+        if (aiSuggestions.aiSuggestions) {
+            try {
+
+                const completion = await openai.chat.completions.create({
+                    messages: [...openAiChats, { role: role, content: msg }],
+                    model: "gpt-3.5-turbo",
+                });
+                setPlaceholderVal(completion?.choices[0]?.message?.content)
+            }
+            catch (e) {
+                try {
+                    openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
+                    const completion = await openai.chat.completions.create({
+                        messages: [...openAiChats, { role: role, content: msg }],
+                        model: "gpt-3.5-turbo",
+                    });
+                    setPlaceholderVal(completion.choices[0].message.content)
+                } catch (e) {
+                    console.log(e)
+                }
+            }
+        } else {
+            setPlaceholderVal('Enter your message and hit "Enter"')
+        }
+    }
+    const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
+    useEffect(() => {
+        if (firstTimeLoaded) {
+            handleAiSuggestion("assistant", "Provide response for this : " + recievedMessage)
+        } else {
+            setFirstTimeLoaded(true)
+        }
+        if (recievedMessage !== '' && messages) {
+            setMessages((prevMessages) => [{ message: recievedMessage, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
+        }
+        // else {
+        //     console.log(recievedMessage,messages)
+        //     setMessages([{ message: recievedMessage, isSender: false }])
+        //     setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
+        //     // setOpenAiChats([{ role: "assistant", content: recievedMessage }])
+        // }
     }, [recievedMessage]);
 
     const fetchData = async () => {
@@ -122,9 +193,16 @@ export const MainComponent: React.FC = () => {
                 const reversedSelectedGroups = data.selectedGroups.slice().reverse();
                 setSelectedGroups(reversedSelectedGroups);
                 // setSelectedGroups(data.selectedGroups)
-                setResults(data.groups)
+                // console.log(data.selectedUsers)
+                // setResults()
+                const groupsNotInSelected = data.groups.filter(
+                    (group) => !data.selectedGroups.some(selectedGroup => selectedGroup.groupName === group.groupName)
+                );
+
+                setResults(groupsNotInSelected);
                 setOptions(data.selectedUsers)
                 setCurrentUser(data.currentUser)
+                handleGroupClick(0)
             })
         } catch (e) {
             console.log(e)
@@ -168,34 +246,67 @@ export const MainComponent: React.FC = () => {
     };
 
     const handleSearchResultClicked = (result: object) => {
-        setDisplaySearchResults(false)
         setSearchTerm('')
-        setRoomId(nanoid())
-
-        const isResultAlreadySelected = selectedUser?.some(
-            (user) => user._id === result._id
-        );
-        console.log(isResultAlreadySelected, selectedUser, result)
-        if (selectedUser?.length === 0 && !isResultAlreadySelected) {
-            setSelectedUser([result])
-        }
-        else if (selectedUser?.length > 0 && !isResultAlreadySelected) {
-            setSelectedUser([result, ...selectedUser])
-        }
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Send request to join this group",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, send request!'
+        }).then(async (res) => {
+            if (res.isConfirmed) {
+                const response = await fetch('http://localhost:4000/sendRequestToJoinGroup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ currentUser: currentUser, groupName: result?.groupName })
+                })
+                if (response.status === 200) {
+                    Swal.fire(
+                        'Request Sent!',
+                        'Your request has been sent successfully.',
+                        'success'
+                    )
+                    setDisplaySearchResults(false)
+                }
+            } else {
+                setDisplaySearchResults(false)
+            }
+        })
     }
 
-    const handleGroupClick = (index: number) => {
-        // setIsChatWindowVisible(!isChatWindowVisible)
-        setMessages(selectedGroups[index]?.messages)
+    const [selectedDetailedGroupAdmins, setSelectedDetailedGroupAdmins] = useState<object[]>([])
+    const [selectedDetailedGroupMembers, setSelectedDetailedGroupMembers] = useState<object[]>([])
+
+
+    const handleGroupClick = async (index: number) => {
+        setIdx(index)
+        console.log(selectedGroups, selectedGroups[index])
+        if (roomID.roomID && roomID.roomID !== '' && roomID.roomID !== 'undefined' && socket) {
+            console.log(currentUserName?.username,roomID.roomID.toString() )
+            socket.emit("leave_Room", { room_Id: roomID.roomID.toString(), username: currentUserName?.username });
+        }
+        setRoomId(selectedGroups[index]?.roomId)
+        if (selectedGroups[index]) {
+            setRoomID('roomID', selectedGroups[index]?.roomId, { path: '/' })
+        }
+        try {
+            const response = await axios.post('http://localhost:4000/getGroupChats', { groupName: selectedGroups[index]?.groupName })
+            setMessages(response.data.chats)
+        } catch (e) { console.log(e) }
+
+        setSelectedDetailedGroupAdmins(selectedGroups[index]?.admins)
+        setSelectedDetailedGroupMembers(selectedGroups[index]?.members)
         setIsChatWindowVisible(true);
         setUserClicked(index);
-        console.log(selectedGroups[index]?.roomId)
-        setRoomId(selectedGroups[index]?.roomId)
-        console.log("handleGroupClicled", roomId)
+
+
         if (socket) {
-            socket.emit("joinRoom", selectedGroups[index]?.roomId);
+            socket.emit("join_Room", { room_Id: selectedGroups[index]?.roomId.toString(), username: currentUserName?.username });
             console.log("sender joining room")
-            socket.emit("sendRoomId", { roomId: selectedGroups[index]?.roomId, email: emailCookie.email });
         }
     }
 
@@ -205,7 +316,7 @@ export const MainComponent: React.FC = () => {
         setMessages((prevMessages) => [{ message: typedMessage, sender: currentUser.username }, ...prevMessages])
         if (socket) {
             setTypedMessage('')
-            socket.emit("sendMessage", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, room_Id: roomId, user: currentUser?.username, email: emailCookie.email });
+            socket.emit("send_Message", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, room_Id: selectedGroups[idx].roomId, user: currentUser?.username, email: emailCookie.email });
 
         }
         const res = await fetch('http://localhost:4000/addChatInGroup', {
@@ -219,6 +330,13 @@ export const MainComponent: React.FC = () => {
                 console.log('Message sent successfully.')
             }
         })
+        // if (messages) {
+        //     setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
+        //     setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
+        // } else {
+        //     setMessages([{ message: typedMessage, isSender: true }])
+        //     setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
+        // }
     }
 
 
@@ -280,9 +398,6 @@ export const MainComponent: React.FC = () => {
 
     const [isOpen, setIsOpen] = useState(false)
 
-    const handleUserArchive = async () => {
-    }
-
     const handleUserDelete = async () => {
 
     }
@@ -295,10 +410,246 @@ export const MainComponent: React.FC = () => {
         }
     };
 
+    const handleIconClick = () => {
+        fileInputRef?.current.click();
+    };
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const fileInputRef = useRef(null);
+    const [retrievedProfilePic, setRetrievedProfilePic] = useState<boolean>(false)
+    const [groupProfilePicPath, setGroupProfilePicPath] = useCookies(['groupProfilePicPath'])
+
+
+    useEffect(() => {
+        if (selectedGroups && selectedGroups[idx]?.profilePic) {
+            setRetrievedProfilePic(true)
+        }
+    }, [selectedGroups])
+
+
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files[0];
+
+        const reader = new FileReader();
+        console.log(1, selectedFile, e.target.result)
+        reader.onload = async (event: ProgressEvent<FileReader>) => {
+            console.log(2)
+            setSelectedImage(event.target.result);
+            const formData = new FormData();
+            formData.append('groupName', selectedGroups[idx].groupName)
+            formData.append('profilePic', selectedFile);
+            try {
+                console.log("before calling")
+                const response = await axios.post('http://localhost:4000/uploadGroupProfilePic', formData);
+                console.log("after calling")
+                if (response.status === 200) {
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 1000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "success",
+                        title: "Profile Picture Updated Successfully!"
+                    });
+                }
+            } catch (e) { console.log(e) }
+        };
+        if (selectedFile) {
+            reader.readAsDataURL(selectedFile);
+        }
+    };
+
+    const handleLeaveGroup = async () => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You want to leave this group!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, leave it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                const res = await fetch('http://localhost:4000/leaveGroup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ currentUser: currentUser, groupName: selectedGroups[idx].groupName })
+                })
+                setSelectedGroups(selectedGroups.filter((group, index) => index !== idx))
+                setIsOpen(false)
+                Swal.fire(
+                    'Group Left!',
+                    'You have successfully left the group.',
+                    'success'
+                )
+            }
+        })
+    }
+
+    const [is_recording, setIsRecording] = useState(false)
+    const audioChunks = React.useRef<any[]>([])
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null)
+    async function startRec() {
+        console.log(1)
+        setIsRecording(true)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mediaRecorder = new MediaRecorder(stream)
+        mediaRecorder.start()
+        mediaRecorder.ondataavailable = (e) => {
+            console.log(2)
+            if (e.data.size > 0) {
+                audioChunks.current.push(e.data)
+            }
+        }
+        mediaRecorder.onstop = async () => {
+            console.log(3)
+            const audioBlob = new Blob(audioChunks.current, { type: 'audio/ogg' })
+            const audioFile = new File([audioBlob], 'audio.ogg', { type: 'audio/ogg' });
+
+            const formData = new FormData();
+            formData.append('audio', audioFile);
+            formData.append('roomId', roomId);
+            formData.append('sender', currentUser.username);
+            formData.append('profilePic', profilePicPath?.profilePicPath);
+
+            try {
+                const response = await axios.post('http://localhost:4000/groupUploadAudio', formData)
+                console.log(response)
+                const data = response.data;
+                const audioURL = data.audioURL;
+                setMessages((prevMessages) => [{ audioURL: audioURL, sender: currentUser?.username }, ...prevMessages])
+                if (socket) {
+                    socket.emit('voice_message', { audioURL: audioURL, roomId, profilePic: profilePicPath?.profilePicPath, user: currentUser?.username });
+                }
+
+            } catch (e) {
+                console.log(e)
+            }
+        }
+        mediaRecorderRef.current = mediaRecorder
+    }
+    function stopRec() {
+        setIsRecording(false)
+        audioChunks.current = []
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop()
+        }
+    }
+
+    const [dispAddMembersPopUp, setDispAddMembersPopUp] = useState<boolean>(false)
+    const [availableMembers, setAvailableMembers] = useState<object[]>([])
+
+    const handleViewGroup = () => {
+        setIsOpen(true)
+        let groupMembers = selectedGroups[idx]?.members
+        let allUsers = options
+        let availableMembersForGroup = allUsers.filter((user) => !groupMembers.some((member) => member.username === user.username))
+        console.log(availableMembersForGroup)
+        setAvailableMembers(availableMembersForGroup)
+    }
+
+    const handleDispAddMemberPopUp = () => {
+        setDispAddMembersPopUp(!dispAddMembersPopUp)
+    }
+
+    const [requestedMembers, setRequestedMembers] = useState<object[]>([])
+
+    const handleAddMembers = async () => {
+        try {
+            console.log(groupName, selectedGroupMembers, requestedMembers)
+            const combineMembers = [...selectedGroupMembers, ...requestedMembers]
+            const response = await axios.post('http://localhost:4000/addNewMembersToGroup', { groupName: selectedGroups[idx]?.groupName, selectedGroupMembers: combineMembers })
+            if (response.status === 200) {
+                Swal.fire(
+                    'Members Added!',
+                    'Members have been added successfully.',
+                    'success'
+                )
+                setDispAddMembersPopUp(false)
+            }
+        } catch (e) { console.log(e) }
+    }
+
+
 
 
     return (
         <>
+            {/* {dispAddMembersPopUp ?
+                <> */}
+            <div className={`w-[700px] top-[15%] z-20 left-[30%] h-[400px] absolute border border-white bg-black rounded-md flex flex-col justify-center items-center ${dispAddMembersPopUp === null ? '' : dispAddMembersPopUp ? 'appear' : 'disappear'}`} onClick={(e) => e.stopPropagation()} >
+                <div className='w-[100%] h-[20%]  flex justify-center items-center ' >
+                    <p className='text-white text-2xl font-semibold ' > <GroupAddIcon sx={{ width: '40px', marginBottom: '1%', height: '30px', color: 'white' }} /> Add Members to {selectedGroups[idx]?.groupName} </p>
+                </div>
+                <div className='w-[100%] h-[20%] e mt-5 mb-5 flex justify-start items-center ' >
+                    <p className=' w-[30%] h-[100%] flex justify-center items-center  ml-[35px] text-white text-xl font-semibold ' ><HandshakeIcon sx={{ width: '40px', marginBottom: '1%', height: '30px', color: 'white' }} />   Add friends</p>
+                    <Multiselect options={availableMembers} placeholder='Select members' displayValue='username' className='multi-select w-[100px] ml-5 ' onSelect={(selectedList, selectedItem) => { setSelectedGroupMembers(selectedList) }} onRemove={(selectedList, removedItem) => { setSelectedGroupMembers(selectedList) }}
+                        style={{
+                            option: {
+                                color: "#fff",
+                                width: '100%'
+                            },
+                            searchBox: {
+                                border: '1px solid #ccc',
+                                borderRadius: '5px',
+                            },
+                            inputField: {
+                                color: '#333',
+                            },
+                            chips: {
+                                border: '1px solid #fff',
+                                background: '#1e232c',
+                                color: '#fff',
+                            },
+                            highlightOption: {
+                                backgroundColor: "black !important",
+                                color: "white !important"
+                            }
+                        }}
+                    />
+                </div>
+                <div className='w-[100%] h-[20%]  flex justify-start items-center ' >
+                    <p className=' w-[30%] h-[100%] ml-[35px] flex justify-center items-center text-white text-xl font-semibold ' > <MoveToInboxIcon sx={{ width: '40px', marginBottom: '1%', height: '30px', color: 'white' }} />  Requests {selectedGroups[idx]?.requests.length > 0 ? '(' + selectedGroups[idx]?.requests.length + ')' : ''}</p>
+                    <Multiselect options={selectedGroups[idx]?.requests} placeholder='Select members' displayValue='username' className='multi-select w-[100px] ml-5 ' onSelect={(selectedList, selectedItem) => { setRequestedMembers(selectedList) }} onRemove={(selectedList, removedItem) => { setRequestedMembers(selectedList) }}
+                        style={{
+                            option: {
+                                color: "#fff",
+                                width: '100%'
+                            },
+                            searchBox: {
+                                border: '1px solid #ccc',
+                                borderRadius: '5px',
+                            },
+                            inputField: {
+                                color: '#333',
+                            },
+                            chips: {
+                                border: '1px solid #fff',
+                                background: '#1e232c',
+                                color: '#fff',
+                            },
+                            highlightOption: {
+                                backgroundColor: "black !important",
+                                color: "white !important"
+                            }
+                        }}
+                    />
+                </div>
+                <div className='w-[100%] h-[20%] flex justify-center items-center  mt-5  ' >
+                    <button className='w-[20%] h-[60%] border border-white rounded-md text-white addMembersButton ' onClick={handleAddMembers} > Add Members</button>
+                </div>
+            </div>
+            {/* </>
+                : <></>} */}
             <Drawer
                 open={isOpen}
                 onClose={() => setIsOpen(false)}
@@ -306,46 +657,73 @@ export const MainComponent: React.FC = () => {
                 className='drawer'
                 style={{ width: "25vw", backgroundColor: "#1e232c" }}
             >
-                <div className='absolute top-0 right-0 w-[40px] h-[30px] cursor-pointer z-50 border border-white flex justify-center items-center ' onClick={() => setIsOpen(false)} ><CloseIcon style={{ width: "80%", height: "80%", color: "white", cursor: "pointer" }} /></div>
-                <div className='w-[100%] h-[40%] relative border-b border-white flex justify-center items-center' >
-                    <div className='w-[200px] h-[200px] rounded-full border border-white overflow-hidden ' >
-                        {selectedUser && selectedUser[userClicked]?.profilePic ? <><img
-                            src={`http://localhost:4000/getprofilePic/${selectedUser[userClicked]?.profilePic}`}
-                            alt="profile"
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        /></> : <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />}
+                <div className='absolute top-0 right-0 w-[40px] h-[30px] cursor-pointer z-50 border border-white flex justify-center items-center' onClick={() => { setDispAddMembersPopUp(false); setIsOpen(false) }} ><CloseIcon style={{ width: "80%", height: "80%", color: "white", cursor: "pointer" }} /></div>
+                <div className='w-[100%] h-[30%] relative flex justify-center items-center cursor-pointer ' >
+                    <NotificationAddIcon sx={{ position: 'absolute', width: '30px', height: '30px', top: '15px', left: '15px', color: 'white' }} onClick={handleDispAddMemberPopUp} />
+                    <div className='w-[200px] h-[200px] rounded-full flex justify-center items-center border border-white overflow-hidden ' onClick={handleIconClick}  >
+                        {selectedGroups[idx]?.profilePic ? <>
+
+                            <img
+                                src={selectedImage ? selectedImage : `http://localhost:4000/getprofilePic/${selectedGroups[idx].profilePic}`}
+                                alt="profile"
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                        </> : <>
+                            {selectedImage ? <>
+                                <img
+                                    src={selectedImage}
+                                    alt="profile"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                            </> : <>
+                                <PersonIcon style={{ color: "white", width: "70%", height: "70%" }} /></>}
+
+                        </>}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                        />
                     </div>
                 </div>
-                {selectedUser ? <>
-                    {/* <div className='w-[100%] h-[20%] flex flex-col justify-center items-center '>
-                    <div className='w-[100%] h-[40%] flex  items-center' >
-                        <p className='text-white   ml-5 ' ><strong> Name : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.name}</p>
-                    </div>
-                    <div className='w-[100%] h-[40%] flex items-center' >
-                        <p className='text-white  ml-5 ' ><strong> Username : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.username}</p>
-                    </div>
+                <div className='w-[100%] h-[10%] flex flex-col justify-center items-center'>
+                    <p className='w-[100%] h-[50%] flex justify-center items-center text-white text-2xl font-bold' >{selectedGroups[idx]?.groupName}</p>
+                    <p className='w-[100%] h-[50%] flex justify-center items-center text-white text-md pl-5 ' >❝One day we will rise❞ <EditIcon sx={{ width: '10%', height: '45%', padding: '0', color: 'white' }} /> </p>
                 </div>
-                <div className='w-[100%] h-[20%] flex flex-col justify-center items-center' >
-                    <div className='w-[100%] h-[20%] justify-center items-center border-y border-white text-center ' ><p className='text-white font-semibold ' > Get in touch</p>  </div>
-                    <div className='w-[100%] h-[80%] flex flex-col justify-center items-center'>
-                        <div className='w-[100%] h-[50%] flex justify-startitems-center mt-5'>
-                            <p className='ml-5 text-white' ><strong>Email : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.email} </p>
-                        </div>
-                        <div className='w-[100%] h-[50%] flex justify-start   items-center' >
-                            <p className='ml-5 text-white'><strong>Phone : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.phoneno} </p>
-                        </div>
+                <div className='w-[100%] h-[60%] pt-5 border-t border-white flex flex-col justify-center items-center' >
+                    <div className='w-[100%] h-[25%] flex flex-col items-center justify-center ' >
+                        <div className='w-[100%] h-[20%] flex justify-center items-center text-white text-xl italic ' >Admins</div>
+                        <AvatarGroup sx={{ width: "80%", height: "80%", display: 'flex', justifyContent: "center", alignItems: "center" }} max={4}>
+                            {selectedDetailedGroupAdmins?.map((admin, index) => (
+                                <Avatar sx={{ width: "50px", height: "50px" }} alt={admin.username} src={`http://localhost:4000/getprofilePic/${admin.profilePic}`} />
+                            ))}
+                        </AvatarGroup>
                     </div>
+                    <div className='w-[100%] h-[25%]  flex flex-col items-center justify-center ' >
+                        <div className='w-[100%] h-[20%] flex justify-center items-center  text-white text-xl italic' >Members</div>
+                        <AvatarGroup sx={{ width: "80%", height: "80%", display: 'flex', justifyContent: "center", alignItems: "center" }} max={4}>
+                            {selectedDetailedGroupMembers?.map((member, index) => (
+                                <Avatar sx={{ width: "50px", height: "50px" }} alt={member.username} src={`http://localhost:4000/getprofilePic/${member.profilePic}`} />
+                            ))}
+                        </AvatarGroup>
+                    </div>
+                    <div className='w-[100%] h-[25%]  border-t border-white p-5 flex justify-center items-center  ' >
+                        <div className='w-[100%] h-[20%] flex flex-col justify-center items-center  text-white text-lg ' > <p> Created On :</p>  <p className='italic' > {new Date(selectedGroups[idx]?.createdAt).getDate()}/{new Date(selectedGroups[idx]?.createdAt).getMonth() + 1}/{new Date(selectedGroups[idx]?.createdAt).getFullYear()}</p></div>
+                        <div className='w-[100%] h-[20%] flex flex-col justify-center items-center  text-white text-lg ' > <p> Last updated :</p> <p className='italic' > {new Date(selectedGroups[idx]?.updatedAt).getDate()}/{new Date(selectedGroups[idx]?.updatedAt).getMonth() + 1}/{new Date(selectedGroups[idx]?.updatedAt).getFullYear()}</p></div>
+                    </div>
+                    <div className='w-[100%] h-[25%] flex-1 flex border-t border-white items-center cursor-pointer signoutdiv ' onClick={handleLeaveGroup} >
+                        <ExitToAppIcon style={{ color: "white", width: "25%", height: "50%", padding: "-10px", margin: "0" }} />
+                        <p className='text-white text-xl font-light ' >Leave Group</p>
+                    </div>
+
                 </div>
-                <div className='w-[100%] h-[20%] flex flex-col justify-center items-center border-t border-white ' >
-                    <div className='w-[100%] h-[50%] flex justify-start items-center' >
-                        <p className='ml-5 text-white'><strong>Joined GIGA-CHAT on : </strong></p><p className='ml-3 font-thin text-white' >{new Date(selectedUser[index]?.createdAt).getDate()}/{new Date(selectedUser[index]?.createdAt).getMonth() + 1}/{new Date(selectedUser[index]?.createdAt).getFullYear()} </p>
-                    </div>
-                </div> */}
-                </> : <></>}
+
 
             </Drawer>
             {contextMenu.show && <div className={`absolute z-50 bg-black border border-white w-[200px] h-[150px] flex flex-col justify-center items-center rounded-md`} ref={contextMenuRef} onClick={handleContextMenuClose} style={{ top: contextMenu.y, left: contextMenu.x }} >
-                <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-b border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={() => setIsOpen(true)} >
+                <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-b border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleViewGroup} >
                     <PersonRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
                     <p className='ml-3 text'>View Group</p>
                 </div>
@@ -353,7 +731,7 @@ export const MainComponent: React.FC = () => {
                     <DeleteIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
                     <p className='ml-3 text' >Delete Group</p>
                 </div>
-                <div className={`w-[100%] h-[34%] flex justify-start cursor-pointer items-center border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserDelete} >
+                <div className={`w-[100%] h-[34%] flex justify-start cursor-pointer items-center border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleLeaveGroup} >
                     <ExitToAppIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
                     <p className='ml-3 text' >Leave Group</p>
                 </div>
@@ -441,14 +819,18 @@ export const MainComponent: React.FC = () => {
                                 <div className=' flex flex-col items-center w-[100%] h-[fit-content] border-b border-white relative z-10'>
                                     {searchResults.length > 0 && searchResults.map((result, index) => (
                                         <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm  bg-[#1e232c] hover:bg-[#3d3c3c] cursor-pointer ' onClick={() => handleSearchResultClicked(result)} >
-                                            <div className='relative w-[20%] h-[100%] border-none'>
-                                                <div className='relative w-[100%] h-[100%] border-none rounded-full flex flex-center items-center justify-center' >
-                                                    <GroupsIcon sx={{ color: "white", width: "70%", height: "70%" }} />
+                                            <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                                <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                    {result?.profilePic ? <><img
+                                                        src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
+                                                        alt="profile"
+                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                    /></> : <GroupsIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
                                                 </div>
                                             </div>
                                             <div className='relative w-[80%] h-[100%] border-none text-white rounded-e-sm '>
                                                 <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{result.groupName}</p>
-                                                <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.members[1].username} +{result.length}more...</p>
+                                                <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.members[1].username} +{result.length - 1}more...</p>
                                             </div>
                                         </div>
                                     ))}
@@ -457,12 +839,17 @@ export const MainComponent: React.FC = () => {
 
                             </>}
                             <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
-                                {selectedGroups && selectedGroups?.map((user, index) => (
-                                    <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => handleGroupClick(index)} >
+                                {selectedGroups && selectedGroups.length > 0 ? selectedGroups?.map((user, index) => (
+                                    <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onContextMenu={handleContextMenu} onClick={() => handleGroupClick(index)} >
                                         <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === index ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
-                                            <div className='relative w-[20%] h-[100%] border-none'>
-                                                <div className='relative w-[100%] h-[100%] border-none rounded-full flex flex-center items-center justify-center' >
-                                                    <GroupsIcon sx={{ color: "white", width: "70%", height: "70%" }} />
+                                            <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                                <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                    {user?.profilePic ? <><img
+                                                        src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
+                                                        alt="profile"
+                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                    /></> : <GroupsIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+
                                                 </div>
                                             </div>
                                             <div className='relative w-[80%] h-[100%] border-none text-white rounded-e-sm '>
@@ -471,48 +858,91 @@ export const MainComponent: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                ))}
+                                )) : <>
+                                    <div className='w-[80%] flex justify-center items-center text-white h-[20%] clickHereAnimation2 ' >
+                                        <StraightIcon sx={{ color: "white", width: "30%", height: "80%" }} /> Click here to search your groups
+                                    </div>
+                                </>
+                                }
                             </div>
                         </div>
 
                     </div>
                 </div>
-                <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
-                    <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
-                        <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-y-auto ' >
-                            {messages && messages.map((msg, index) => (
-                                <div className={`w-[350px] border-none h-[150px] flex border  ${msg.sender === currentUser.username ? ' ml-auto sender' : ''} `} >
-                                    {msg.sender === currentUser.username ? <>
-                                        <div className={`w-[fit-content] h-[fit-content] mt-2 mb-2 mr-0  ${msg.sender === currentUser.username ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex font-thin text-sm  `}>{msg.message}</div>
-                                        <div className='rounded-full border-none w-[40px] h-[40px] mt-auto flex justify-center items-center overflow-hidden ' >
-                                            {profilePicPath.profilePicPath ? <> <img src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`} alt="" /> </> : <>
-                                                <PersonIcon sx={{ borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
-                                            </>}
-                                        </div>
+                {selectedGroups && selectedGroups.length > 0 ? <>
+                    <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
+                        <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
+                            <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-y-auto ' >
+                                {messages && messages.map((msg, index) => (
+                                    <div className={`w-[450px] border-none h-[150px] mb-20 mt-2 flex border  ${msg.sender === currentUser.username ? ' ml-auto sender' : ''} `} >
+                                        {msg.sender === currentUser.username ? <>
+                                            <div className={`w-[fit-content] h-[fit-content] mt-2 mb-2 mr-0  ${msg.sender === currentUser.username ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex font-thin text-sm  `}>
+                                                {msg.audioURL ? (
+                                                    <audio controls src={msg.audioURL} >
+                                                        <source src={msg.audioURL} />
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                ) : (<>
+                                                    {msg.message}
+                                                </>)}
+                                            </div>
+                                            <div className='rounded-full border-none w-[40px] h-[40px] mt-auto flex justify-center items-center overflow-hidden ' >
+                                                {profilePicPath.profilePicPath ? <> <img src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`} alt="" /> </> : <>
+                                                    <PersonIcon sx={{ borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
+                                                </>}
+                                            </div>
 
-                                    </> : <>
-                                        <div className='rounded-full flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto] ' >
-                                            {msg?.profilePic?.length > 0 ? <img src={`http://localhost:4000/getprofilePic/${msg.profilePic}`} alt="" /> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />}
-                                            {/* <PersonIcon sx={{ marginTop: "100%", border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} /> */}
-                                        </div>
-                                        <div className={`w-[fit-content] h-[fit-content] mt-[auto] font-thin text-sm mb-2 border-none ${msg.sender === currentUser.username ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>{msg.message}</div>
-                                    </>}
+                                        </> : <>
+                                            <div className='rounded-full flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto] ' >
+                                                {msg?.profilePic?.length > 0 && msg?.profilePic ? <img src={`http://localhost:4000/getprofilePic/${msg?.profilePic}`} alt={msg.sender} /> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />}
+                                                {/* <PersonIcon sx={{ marginTop: "100%", border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} /> */}
+                                            </div>
+                                            <div className={`w-[fit-content] h-[fit-content] mt-[auto] font-thin text-sm mb-2 border-none ${msg.sender === currentUser.username ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>
+                                                {msg.audioURL ? (
+                                                    <audio src={msg.audioURL} controls>
+                                                        <source src={msg.audioURL} type="audio/wav" />
+                                                        Your browser does not support the audio element.
+                                                    </audio>
+                                                ) : (
+                                                    <>
+                                                        {msg.message}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </>}
 
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
+
+                            <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
+                                <form onSubmit={onChatSubmit} className='submit-chat-form' >
+                                    <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
+                                    <input type="submit" className='hidden w-[0%] h-[0%]' />
+                                </form>
+                            </div>
+                            <div className='w-[10%] h-[100%] flex justify-center items-center' >
+                                <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
+                                    {/* <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRecording} onMouseUp={stopRecordingAndSend}>
+                                                {isMediaRecorderReady ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                            </div> */}
+                                    <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
+                                        {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                    </div>
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    </div>
 
-                    <div className='flex justify-center items-center w-[100%] h-[15%] relative '>
-                        <div className='flex flex-center justify-center items-center relative w-[90%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
-                            <form onSubmit={onChatSubmit} className='w-[100%] h-[100%]' >
-                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder="Enter your message and hit 'Enter'" onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
-                                <input type="submit" className='hidden w-[0%] h-[0%]' />
-                            </form>
-                        </div>
                     </div>
+                </> : <>
+                    <div className='flex flex-col w-[100%] h-screen  justify-center items-center ' >
+                        <img src="/images/no_groups_found2.png" className='w-[70%] h-[85%]  ' alt="" />
 
-                </div>
+                    </div>
+                </>}
             </div>
 
 

@@ -14,6 +14,7 @@ import './index.css'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 import ArchiveIcon from '@mui/icons-material/Archive';
+import { useRouter } from 'next/navigation';
 
 type User = {
     username: {
@@ -92,12 +93,14 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
     }, [ref, handler]);
 };
 
+const socket = io('http://localhost:5000')
+
 export const MainComponent: React.FC = () => {
     const [results, setResults] = useState<object>()
     const [displaySearchResults, setDisplaySearchResults] = useState<boolean>(false)
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [searchResults, setSearchResults] = useState([]);
-    const [selectedUser, setSelectedUser] = useState<User[]>([]);
+    const [selectedUser, setSelectedUser] = useState<object[]>([]);
     const [typedMessage, setTypedMessage] = useState<string>('')
     const [userClicked, setUserClicked] = useState<number | null>(null)
     const [emailCookie, setEmailCookie] = useCookies(['email' as string])
@@ -111,52 +114,38 @@ export const MainComponent: React.FC = () => {
     const [displayNoUsersFoundImg, setDisplayNoUsersFoundImg] = useState<boolean>(false)
 
     const [openAiChats, setOpenAiChats] = useState<object[]>([{ role: "system", content: "You are a helpful assistant , that tells the receiver what should be his next response based on the past conversations  " }, { role: "user", content: "Hello, how are you?" }])
-    const socket = io('http://localhost:5000')
 
     useEffect(() => {
         if (socket) {
-            if (!socket.hasListeners('receiveMessage')) {
-
-                socket.on('receiveMessage', (data) => {
+            if (!socket.hasListeners('receive_Message')) {
+                socket.on('receive_Message', (data) => {
+                    console.log(data, "recievedMessage")
                     if (data.email !== emailCookie.email) {
                         setRecievedMessage(data.message)
                     }
                 })
             }
-
-            socket.on("checkRoomId", (data) => {
-                console.log(data)
+            socket.on("check_RoomId", (data) => {
                 const { room_Id, sender, receiver } = data;
-                // console.log(room_Id, sender, receiver)
                 if (roomId !== room_Id) {
                     if (selectedUser) {
-                        console.log(1, receiver, currentUser?.username)
                         if (receiver === currentUser?.username) {
-                            console.log(2)
                             if (selectedUser.find((user) => user?.username === sender?.username)) {
                                 setRoomId(room_Id)
-                                socket.emit("joinRoom", room_Id);
+                                socket.emit("join_Room", room_Id);
                             } else {
-                                console.log(3)
                                 setRoomId(room_Id)
-                                socket.emit("joinRoom", room_Id);
-                                handleSearchResultClicked(sender, room_Id)
-                                // handleUserClick(0)
-
+                                socket.emit("join_Room", room_Id);
+                                handleSearchResultClicked(sender)
                             }
                         }
-                        // const isRoomIdPresent = selectedUser.find((user) => user.roomId == room_Id);
-                        // if (isRoomIdPresent) {
-                        //     setRoomId(room_Id)
-                        //     socket.emit("joinRoom", room_Id);
-                        // }
                     }
 
                 }
             })
         }
 
-        return () => { socket.off; }
+        // return () => { socket.off('check_RoomId'); }
     }, [socket]);
 
     useEffect(() => {
@@ -274,14 +263,14 @@ export const MainComponent: React.FC = () => {
             console.log(e)
         }
         if (socket) {
-            if (!isChatWindowVisible) {
-                socket.emit("joinRoom", selectedUser[index]?.roomId);
-                socket.emit("sendRoomId", {
+            // if (!isChatWindowVisible) {
+                socket.emit("join_Room", selectedUser[index]?.roomId);
+                socket.emit("send_RoomId", {
                     roomId: selectedUser[index]?.roomId,
                     sender: currentUser,
                     receiver: selectedUser,
                 });
-            }
+            // }
         }
 
     }
@@ -304,7 +293,7 @@ export const MainComponent: React.FC = () => {
         console.log("before openai", openAiChats)
         if (socket) {
             setTypedMessage('')
-            socket.emit("sendMessage", { message: typedMessage, room_Id: roomId, email: emailCookie.email });
+            socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email });
 
         }
     }
@@ -334,6 +323,8 @@ export const MainComponent: React.FC = () => {
     };
 
     const [isOpen, setIsOpen] = useState(false)
+    const { push } = useRouter();
+
 
     const handleUserArchive = async () => {
         try {
@@ -347,7 +338,6 @@ export const MainComponent: React.FC = () => {
                 if (res?.status === 200) {
                     setIsChatWindowVisible(false);
                     const updatedSelectedUsers = selectedUser.filter((user, idx) => idx !== index)
-                    setSelectedUser(updatedSelectedUsers)
                     const Toast = Swal.mixin({
                         toast: true,
                         position: "top-end",
@@ -363,6 +353,11 @@ export const MainComponent: React.FC = () => {
                         icon: "success",
                         title: "User UnArchieved Successfully!"
                     });
+                    if(updatedSelectedUsers.length === 0){
+                        push('/pages/allchats')
+                    }else{
+                        setSelectedUser(updatedSelectedUsers)
+                    }
                 }
             })
         } catch (e) {
@@ -534,12 +529,20 @@ export const MainComponent: React.FC = () => {
 
                             {messages && messages.map((msg, idx) => (
                                 <div className={`w-[350px] border-none h-[150px] flex border mt-2 ${msg.isSender ? ' ml-auto sender' : ''} `} >
-                                    {msg.isSender ? <>
+                                    {msg?.isSender ? <>
                                         <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0  ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex flex-col  `}>
-                                            {msg.message}
-                                        </div>
+                                            {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                <>
+                                                    {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                    <a href={`http://localhost:3000/pages/room/${msg?.message?.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline' >
+                                                        click here
+                                                    </a>
+                                                </>
+                                            ) : (
+                                                <>{msg?.message}</>
+                                            )}                                        </div>
                                         <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex   justify-end ' >
-                                            {profilePicPath.profilePicPath ? <>
+                                            {profilePicPath?.profilePicPath ? <>
                                                 <img
                                                     src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
                                                     alt="profile"
@@ -560,7 +563,18 @@ export const MainComponent: React.FC = () => {
                                             /></> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
                                             }
                                         </div>
-                                        <div className={`w-[fit-content] h-[fit-content] mt-auto font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>{msg.message}</div>
+                                        <div className={`w-[fit-content] h-[fit-content] mt-auto font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>
+                                            {msg.message.includes('http://localhost:3000/pages/room/') ? (
+                                                <>
+                                                    {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                    <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline' >
+                                                        click here
+                                                    </a>
+                                                </>
+                                            ) : (
+                                                <>{msg.message}</>
+                                            )}
+                                        </div>
                                     </>}
 
                                 </div>

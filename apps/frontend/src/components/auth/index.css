@@ -121,6 +121,11 @@ form.sign-up-form {
   background-color: white;
   color: black;
 }
+#sign-up-btn2 {
+  /* background-color: white; */
+  color: white;
+  text-decoration: underline;
+}
 #sign-up-btn:hover {
   background-color: black;
   color: white;
@@ -330,12 +335,6 @@ div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
 }
 
 /*Responsive*/
-@media (max-width: 779px) {
-  .container {
-    width: 100vw;
-    height: 100vh;
-  }
-}
 @media (max-width: 635px) {
   .container::before {
     display: none;
@@ -374,8 +373,10 @@ div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
   justify-content: center;
   align-items: center;
   width: 70%;
-  height: 10vh;
-  transition: opacity 0.5s ease-in-out, height 0.5s ease-in-out;
+  height: 8vh;
+  transition:
+    opacity 0.5s ease-in-out,
+    height 0.5s ease-in-out;
   /* border: 1px solid white; */
 }
 .verification_code_container div {
@@ -387,6 +388,9 @@ div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
   height: 100%;
   padding: 2%;
   background-color: black;
+}
+.Toastify__toast-theme--light {
+  background-color: black !important;
 }
 .verification_code_container div input {
   width: 10%;
@@ -429,3 +433,55 @@ input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* Responsive */
+@media (max-width: 779px) {
+  .container {
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    transition: transform 0.5s ease;
+  }
+
+  .container::before {
+    display: none;
+  }
+
+  form {
+    width: 80%;
+  }
+
+  .panels-container {
+    display: none;
+  }
+
+  .account-text {
+    display: initial;
+    margin-top: 30px;
+  }
+  form {
+    width: 90%;
+  }
+
+  .container.sign-up-mode form.sign-up-form,
+  .container.sign-up-mode2 form.sign-up-form {
+    display: flex;
+    opacity: 1;
+  }
+
+  .container.sign-up-mode form.sign-in-form,
+  .container.sign-up-mode2 form.sign-in-form {
+    display: none;
+  }
+
+  
+
+  /* .sign-up-mode {
+    transform: translateX(-100%); 
+    transition: 0.5s ease-in-out;
+  } */
+}
+
+/* @media (max-width: 635px) {
+
+} */

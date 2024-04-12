@@ -11,8 +11,10 @@ import 'react-dropdown/style.css';
 import Swal from 'sweetalert2'
 import { nanoid } from '@reduxjs/toolkit';
 import PsychologyIcon from '@mui/icons-material/Psychology';
-
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 type Event = MouseEvent | TouchEvent;
+import DeleteIcon from '@mui/icons-material/Delete';
 
 export const useClickOutside = <T extends HTMLElement = HTMLElement>(
     ref: RefObject<T>,
@@ -118,9 +120,11 @@ export const MainComponent: React.FC = () => {
         transition: 'transform 1.5s ease',
         transform: btnCount !== 0 ? 'translateY(-300%)' : 'none',
     };
+    const [botTyping, setBotTyping] = useState<boolean>(false)
 
     const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
+        setBotTyping(true)
         const now = new Date();
         const currentTime = `${now.getMinutes()}:${now.getSeconds()}`;
         setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
@@ -131,6 +135,7 @@ export const MainComponent: React.FC = () => {
             setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false }, ...prevMessages])
             const userResponse = await axios.post("http://localhost:4000/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true })
             const botResponse = await axios.post("http://localhost:4000/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime })
+            setBotTyping(false)
         } catch (e) {
             console.log(e)
         }
@@ -189,6 +194,56 @@ export const MainComponent: React.FC = () => {
         let session = nanoid()
         sessionStorage.setItem('sessionId', session)
     }
+    const handleDeleteChat = async (idx: number) => {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const res = await axios.post('http://localhost:4000/deleteAiChat', { currentUsername: currentUser?.username, chat: chatHistory[idx] })
+                    if(res.status == 200){
+                        Swal.fire(
+                            'Deleted!',
+                            'Your chat has been deleted.',
+                            'success'
+                        )
+                    }else if(res.status == 400){
+                        Swal.fire(
+                            'Error!',
+                            'Your chat could not be deleted.',
+                            'error'
+                        )
+                    }else if (res.status == 500){
+                        Swal.fire(
+                            'Error!',
+                            'Internal server error',
+                            'error'
+                        )
+                    }else if (res.status == 404){
+                        Swal.fire(
+                            'Error!',
+                            'Chat not found',
+                            'error'
+                        )
+                    }
+                    let upDatedChats = chatHistory.filter((chat, index) => index !== idx)
+                    setChatHistory(upDatedChats)
+                } catch (e) {
+                    console.log(e)
+                }
+            }
+        })
+
+
+    }
+
+
 
 
     return (
@@ -209,11 +264,23 @@ export const MainComponent: React.FC = () => {
                         <div className='w-[100%] h-[100%] overflow-y-scroll searchResults '>
                             <div className='flex flex-col items-center w-[100%] relative z-10 mt-1 h-[95%] overflow-y-scroll' >
                                 {chatHistory.length > 0 ? chatHistory.map((chat, idx) => (
-                                    <div className={`w-[100%] h-[70px] flex flex-col p-2 pl-5 cursor-pointer justify-center rounded-md items-center mt-1 bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c] hover:text-white`} onClick={() => handleChatClicked(idx)} >
-                                        <p className='text-white w-[100%] h-[80%] flex justify-start items-center text-xl font-bold ' >{new Date(chat?.date).toLocaleDateString('en-GB')}</p>
-                                        <p className='text-white w-[100%] h-[20%] flex justify-start italic mb-2 '> {convertTo12Hour(chat.startingTime)} - {convertTo12Hour(chat.endingTime)} </p>
+                                    <div className={`w-[100%] h-[70px] flex mb-2 p-2 cursor-pointer justify-start rounded-md items-center mt-1 bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c] hover:text-white`} >
+                                        <div className='w-[20%] h-[100%] flex justify-center  items-center ' >
+                                            <ChatBubbleIcon sx={{ width: "60%", height: "60%", color: "white" }} />
+                                        </div>
+                                        <div className='w-[70%] h-[100%] ml-2 flex flex-col justify-center items-center ' onClick={() => handleChatClicked(idx)} >
+                                            <p className='text-white w-[100%] h-[80%] flex justify-start items-center text-xl font-bold ' >{new Date(chat?.date).toLocaleDateString('en-GB')}</p>
+                                            <p className='text-white w-[100%] h-[20%] flex justify-start italic mb-2 '> {convertTo12Hour(chat.startingTime)} - {convertTo12Hour(chat.endingTime)} </p>
+                                        </div>
+                                        <div className='w-[10%] h-[100%] flex justify-center items-center ' onClick={() => handleDeleteChat(idx)} >
+                                            <DeleteIcon sx={{ color: "white", width: "60%", height: "60%" }} className='deleteIconAskAi' />
+                                        </div>
                                     </div>
-                                )) : <></>}
+                                )) : <>
+                                    <div className='w-[80%] flex flex-col justify-center items-center text-white h-[20%] clickHereAnimation3 ' >
+                                        <TrendingFlatIcon sx={{ color: "white", width: "30%", height: "50%" }} /> Start Chatting with AI
+                                    </div>
+                                </>}
                             </div>
                         </div>
 
@@ -330,7 +397,7 @@ export const MainComponent: React.FC = () => {
                     <div className='flex justify-center items-center w-[100%] h-[15%] relative '>
                         <div className='flex flex-center justify-center items-center relative w-[90%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
                             <form onSubmit={handleChatSubmit} className='w-[100%] h-[100%]' >
-                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none' value={typedMessage} onChange={(e) => setTypedMessage(e.target.value)} placeholder='Enter your query and hit "Enter"' />
+                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none' value={typedMessage} onChange={(e) => setTypedMessage(e.target.value)} placeholder={botTyping ? 'Bot is Typing...' : `Enter your query and hit "Enter"`} disabled={botTyping} />
                                 <input type="submit" className='hidden w-[0%] h-[0%]' />
                             </form>
                         </div>

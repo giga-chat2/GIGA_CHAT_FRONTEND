@@ -1,7 +1,4 @@
-import e from "express";
 import mongoose from "mongoose";
-import { send } from "process";
-
 const { Schema } = mongoose;
 
 const userSchema = new Schema(
@@ -34,6 +31,16 @@ const userSchema = new Schema(
       type: String,
       required: false
     },
+    aiSuggestions: {
+      type: Boolean,
+      required: false,
+      default: true
+    },
+    dispStatus: {
+      type: Boolean,
+      required: false,
+      default: true
+    }
   },
   { timestamps: true }
 );
@@ -67,7 +74,7 @@ const selectedUsersSchema = new Schema({
       },
       provider: {
         type: String,
-        required: true
+        required: false
       },
       roomId: {
         type: String,
@@ -85,11 +92,19 @@ const selectedUsersSchema = new Schema({
         type: Boolean,
         required: false
       },
+      lastChatTime: {
+        type: Date,
+        required: false
+      },
       chats: [
         {
+          audioURL: {
+            type: String,
+            required: false
+          },
           message: {
             type: String,
-            required: true
+            required: false
           },
           isSender: {
             type: Boolean,
@@ -106,9 +121,9 @@ const GroupSchema = new Schema({
     type: String,
     required: true
   },
-  profilePic:{
-    type:String,
-    required:false
+  profilePic: {
+    type: String,
+    required: false
   },
   roomId: {
     type: String,
@@ -123,6 +138,10 @@ const GroupSchema = new Schema({
       email: {
         type: String,
         required: true
+      },
+      profilePic: {
+        type: String,
+        required: false
       }
     }
   ],
@@ -135,14 +154,38 @@ const GroupSchema = new Schema({
       email: {
         type: String,
         required: true
+      },
+      profilePic: {
+        type: String,
+        required: false
+      }
+    }
+  ],
+  requests: [
+    {
+      username: {
+        type: String,
+        required: true
+      },
+      email: {
+        type: String,
+        required: true
+      },
+      profilePic: {
+        type: String,
+        required: false
       }
     }
   ],
   messages: [
     {
+      audioURL:{
+        type: String,
+        required: false
+      },
       message: {
         type: String,
-        required: true
+        required: false
       },
       sender: {
         type: String,
@@ -154,8 +197,8 @@ const GroupSchema = new Schema({
         required: false
       }
     }
-  ]
-})
+  ],
+}, { timestamps: true })
 
 
 const ArchiveUsersSchema = new Schema({
@@ -226,7 +269,7 @@ const AiChatSchema = new Schema({
       }
     }
   ],
-  session:{
+  session: {
     type: String,
     required: false
   },
@@ -248,6 +291,45 @@ const AiChatSchema = new Schema({
   }
 })
 
+const MeetingSchema = new Schema({
+  username: {
+    type: String,
+    required: true
+  },
+  meetings: [
+    {
+      meetingId: {
+        type: String,
+        required: true
+      },
+      date: {
+        type: String,
+        required: false
+      },
+      startTime: {
+        type: String,
+        required: false
+      },
+      endTime: {
+        type: String,
+        required: false
+      },
+    }
+  ]
+})
+
+const OnlineUsers = new Schema({
+  onlineUsers: {
+    type: [String],
+    required: true,
+    unique: true
+  }
+})
+
+export const OnlineUser = mongoose.model("OnlineUser", OnlineUsers, "onlineUsers");
+
+export const Meeting = mongoose.model("Meeting", MeetingSchema, "meetings");
+
 export const AiChat = mongoose.model("AiChat", AiChatSchema, "aiChats");
 
 export const Group = mongoose.model("Group", GroupSchema, "groups");
@@ -258,4 +340,3 @@ export const User = mongoose.model("User", userSchema, 'user_credentials')
 
 export const ArchiveUsers = mongoose.model("ArchiveUsers", ArchiveUsersSchema, "archivedUsers");
 
-// export default mongoose.models.User || mongoose.model("User", userSchema);

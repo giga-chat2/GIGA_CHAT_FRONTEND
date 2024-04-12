@@ -633,7 +633,7 @@ main.sign-up-mode .carousel {
     display: flex !important;
     transform: scale(0);
     opacity: 0;
-    animation: appearFromCenter 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation: appearFromCenter 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   }
   
   @keyframes disappearToCenter {
@@ -647,10 +647,31 @@ main.sign-up-mode .carousel {
     }
   }
   
+  @keyframes float4 {
+    0% {
+      box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+      transform: translatex(0px);
+    }
+    50% {
+      box-shadow: 0 25px 15px 0px rgba(0,0,0,0.2);
+      transform: translatex(-20px);
+    }
+    100% {
+      box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+      transform: translatex(0px);
+    }
+  }
+  .clickHereAnimation4{
+    margin-top: 200px !important; /* Adjust margin as needed */
+    transform: translatex(0px);
+    animation: float4 2s ease-in-out infinite;
+  }
+  
+
   .disappear {
     transform-origin: center;
     display: flex !important;
-    animation: disappearToCenter 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation: disappearToCenter 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   }
   
   .createGrpButton{
@@ -761,6 +782,40 @@ main.sign-up-mode .carousel {
   }
 }
 
+
+.QAHxuJxRZWb3P_cbR8QA{
+  background-color: #000 !important;
+}
+.lRNsiz_pTf7YmA5QMh4z{
+  border-radius: 25px;
+  border: 1px solid white;
+  background-color: #000 !important;
+}
+.pVo6XoSfywa4eLk9ef2S{
+  background-color: #000 !important;
+}
+.qiKszVnhEXQGhWJ0gGcL{
+  background-color: #000 !important;
+}
+.pVo6XoSfywa4eLk9ef2S{
+  background-color: #000 !important;
+}
+.ji5jASszKFf2CGCmbxEh{
+  background: #000 !important ;
+  margin: 0px 50px 0px 49px;
+  border: 1px solid white;
+  border-radius: 25px;
+  width:98% !important;
+}
+.sCsSbKP9yxvw4LQAeaTz{
+  background-color: #000 !important;
+}
+.BYpXSnOHfrC2td4QRijO{
+  background-color: #000 !important;
+}
+.D9WLyEQaARfWqCTyVrpU{
+  box-shadow: 0px 14px 24px 0px black !important;
+}
 
 @media (max-width: 530px) {
   main {

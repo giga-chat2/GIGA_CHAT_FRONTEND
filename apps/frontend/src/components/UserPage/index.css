@@ -1,0 +1,57 @@
+.bubble1 {
+    --r: 20px; /* the radius */
+    --t: 10px; /* the size of the tail */
+  
+    max-width: 200px;
+    padding: calc(2 * var(--r) / 3);
+    -webkit-mask:
+      radial-gradient(var(--t) at var(--_d) 0, #0000 98%, #000 102%) var(--_d)
+        100% / calc(100% - var(--r)) var(--t) no-repeat,
+      conic-gradient(at var(--r) var(--r), #000 75%, #0000 0) calc(var(--r) / -2)
+        calc(var(--r) / -2) padding-box,
+      radial-gradient(50% 50%, #000 98%, #0000 101%) 0 0 / var(--r) var(--r) space
+        padding-box;
+    /* background: linear-gradient(135deg,#FE6D00,#1384C5) border-box; */
+    color: #fff;
+    margin-top: auto;
+  }
+  .left1 {
+    --_d: 0%;
+    border-left: var(--t) solid #0000;
+    margin-right: var(--t);
+    place-self: start;
+  }
+  .right1 {
+    /* margin-right: 0px !important; */
+    /* border:"1px solid white "!important; */
+    --_d: 100%;
+    border-right: var(--t) solid #0000;
+    /* margin-left: var(--t); */
+    place-self: end;
+  }
+  ::-webkit-scrollbar {
+    width: 0px; /* Adjust the width as needed */
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: transparent; /* Make the thumb (handle) transparent */
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: transparent; /* Make the track (the area behind the thumb) transparent */
+  }
+  
+  .sender {
+    margin-right: 0px !important;
+    padding-right: 0px !important;
+  }
+  .hovered {
+    background-color: white !important;
+  }
+  .hovered .text {
+    color: black !important;
+  }
+  .hovered .icon {
+    color: black !important;
+  }
+  

@@ -5,6 +5,7 @@ import passwordReducer from "./features/password-slice";
 import intialPopUpReducer from "./features/intialPopUp-slice";
 import providerReducer  from "./features/provider-slice";
 import { TypedUseSelectorHook, useSelector } from "react-redux";
+import initialDataReducer from "./features/initialData-slice";
 
 export const store = configureStore({   
     reducer: {
@@ -12,8 +13,9 @@ export const store = configureStore({
         emailReducer,
         passwordReducer,
         intialPopUpReducer,
-        providerReducer
-    },
+        providerReducer,
+        initialDataReducer,
+    }
 });
 
 export type RootState = ReturnType<typeof store.getState>;

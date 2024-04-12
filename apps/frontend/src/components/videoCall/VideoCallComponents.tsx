@@ -5,14 +5,31 @@ import { useCookies } from 'react-cookie'
 import './index.css'
 import { Multiselect } from 'multiselect-react-dropdown'
 import { useParams } from 'next/navigation'
-import {ZegoUIKitPrebuilt} from "@zegocloud/zego-uikit-prebuilt"
-import {nanoid} from 'nanoid'
+// import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt"
+import { nanoid } from 'nanoid'
+import { io } from 'socket.io-client';
+import axios from 'axios';
+import VideoChatIcon from '@mui/icons-material/VideoChat';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 
 export const VideoCallMainComponent: React.FC = () => {
     const [currentUser, setCurrentUser] = useCookies(['username' as string])
     const [emailCookie, setEmailCookie] = useCookies(['email' as string])
     const [selectedUser, setSelectedUser] = useState<object[]>([])
     const [options, setOptions] = useState([])
+    const socket = io('http://localhost:5000')
+    const [meetings, setMeetings] = useState<object[]>([])
+    const fetchMeetings = async () => {
+        try {
+            const response = await axios.post('http://localhost:4000/getMeetings', { username: currentUser.username })
+            // console.log(response)
+            setMeetings(response.data.meetings)
+        } catch (e) { console.log(e) }
+    }
+    useEffect(() => {
+        fetchMeetings()
+    }, [])
 
     const fetchInitialData = async () => {
         try {
@@ -39,7 +56,7 @@ export const VideoCallMainComponent: React.FC = () => {
 
     const handleRoomJoin = async () => {
         Swal.fire({
-            title: 'Enter Room Name',
+            title: 'Enter Room ID ',
             input: 'text',
             inputAttributes: {
                 autocapitalize: 'off'
@@ -49,41 +66,68 @@ export const VideoCallMainComponent: React.FC = () => {
             showLoaderOnConfirm: true,
             preConfirm: (roomName) => {
                 const url = `room/${roomName}`
-                window.location.href = url
+                // window.location.href = url
+                window.open(url, '_blank');
             },
             allowOutsideClick: () => !Swal.isLoading()
         })
-        // const roomName = 'testRoom'
-        // const url = `room/${roomName}`
-        // window.location.href = url
 
     }
     const [sharedUsers, setSharedUsers] = useState<object[]>([])
     const [dispCreateGroupPopUp, setDispCreateGroupPopUp] = useState<boolean | null>(null)
+    const [prevRoomId, setPrevRoomId] = useState<string>('')
     const handleShareLink = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setDispCreateGroupPopUp(false)
-        let roomId=nanoid()
+        let roomId = nanoid()
         // console.log(sharedUsers)
-        try{
+        try {
+            if (socket) {
+                socket.emit("joinRoom", roomId)
+                sharedUsers.forEach(user => {
+                    console.log(user)
+                    socket.emit("sendRoomId", { roomId: user?.roomId, sender: currentUser, receiver: user.username })
+                    console.log("before")
+                    socket.emit("sendMessage", { message: `Let's meet my friend : http://localhost:3000/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email });
+                    console.log("after")
+                })
+            }
             const response = await fetch('http://localhost:4000/shareLink', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ currentUser:currentUser.username, sharedUsers: sharedUsers, roomId:roomId})
+                body: JSON.stringify({ currentUser: currentUser.username, sharedUsers: sharedUsers, roomId: roomId })
             })
+            console.log("Before")
+            window.open(`http://localhost:3000/pages/room/${roomId}`, '_blank');
             setDispCreateGroupPopUp(false)
-
-        }catch(e){
+            console.log('redirect hona chahiye tha')
+        } catch (e) {
             console.log(e)
         }
     }
+    const [userClicked, setUserClicked] = useState<number | undefined>()
+    const handleChatClicked = async (idx: number) => {
+        setUserClicked(idx)
+    }
+    const formatTime = (timeString) => {
+        // Split the time string by ':'
+        const timeParts = timeString.split(':');
+        // Extract hours, minutes, and AM/PM part
+        const hours = parseInt(timeParts[0]);
+        const minutes = parseInt(timeParts[1]);
+        const ampm = timeParts[2]?.split(' ')[1]; // Extracting 'PM' or 'AM'
 
+        // Construct formatted time string
+        const formattedTime = `${hours}:${minutes}${ampm}`;
+
+        return formattedTime;
+    };
     return (
         <>
             <div className='w-[85vw] h-screen flex flex-row overflow-x-hidden overflow-y-hidden' onClick={() => { if (dispCreateGroupPopUp) { setDispCreateGroupPopUp(false) } }} >
-                <div className={`w-[35vw] h-[35vh] border flex-col z-10 bg-black items-center justify-center hidden border-white absolute left-[35%] top-[20%] rounded-lg ${dispCreateGroupPopUp === null ? '' : dispCreateGroupPopUp ? 'appear' : 'disappear'}`} onClick={(e) => e.stopPropagation()} >
+                <div className={`w-[35vw] h-[35vh] border flex-col z-10 bg-black items-center justify-center hidden border-white absolute left-[35%] top-[30%] rounded-lg ${dispCreateGroupPopUp === null ? '' : dispCreateGroupPopUp ? 'appear' : 'disappear'}`} onClick={(e) => e.stopPropagation()} >
                     <form className='w-[100%] h-[100%] relative ' onSubmit={handleShareLink}>
                         <div className='flex flex-col justify-center items-center h-full'>
                             <div className=' w-[100%] h-[20%]  font-semibold  flex text-2xl rounded-lg text-center justify-center items-center text-white'>Share Link with your friends</div>
@@ -118,14 +162,41 @@ export const VideoCallMainComponent: React.FC = () => {
                         </div>
                     </form>
                 </div>
-                <div className='w-[20%] min-w-[20vw] h-[100%] relative border border-white '>
+                <div className='w-[20vw] min-w-[20vw] h-[100%] relative '>
+                    <div className='w-[100%] h-[90%] relative'>
+                        <div className='w-[100%] h-[7%] mt-6 flex justify-center items-center p-1'>
+                            <VideoChatIcon sx={{ color: "#fff", width: "20%", height: "70%", padding: "0", marginBottom: "1%" }} />
+
+                            <p className='w-[100%] h-[90%] text-xl font-semibold text-white ' >Previous Meetings</p>
+                        </div>
+                        <div className='w-[100%] h-[100%] overflow-y-scroll searchResults '>
+                            <div className='flex flex-col items-center w-[100%] relative z-10 mt-1 h-[95%] overflow-y-scroll' >
+                                {meetings.length > 0 ? meetings.map((chat, idx) => (
+                                    <div className={`w-[100%] h-[70px] flex mb-2 p-2 cursor-pointer justify-start rounded-md items-center mt-1 bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c] hover:text-white`} onClick={() => handleChatClicked(idx)} >
+                                        <div className='w-[20%] h-[100%] flex justify-center  items-center ' >
+                                            <VideocamIcon sx={{width:"60%",height:"60%",color:"white"}} />
+                                        </div>
+                                        <div className='w-[70%] h-[100%] ml-2 flex flex-col justify-center items-center ' >
+                                            <p className='text-white w-[100%] h-[80%] flex justify-start items-center text-xl font-bold ' >{chat?.date}</p>
+                                            <p className='text-white w-[100%] h-[20%] flex justify-start italic mb-2 '> {formatTime(chat?.startTime)} - {formatTime(chat?.endTime)} </p>
+                                        </div>
+                                    </div>
+                                )) : <>
+                                <div className='w-[80%] flex flex-col justify-center items-center text-white h-[20%] clickHereAnimation4 ' >
+                                        <TrendingFlatIcon sx={{ color: "white", width: "30%", height: "50%" }} /> Create/Join your first meeting
+                                    </div>
+                                </>}
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-                <div className='w-[80%] min-w-[20vw] h-[100%] relative border border-white flex justify-center items-center '>
+                <div className='w-[80%] min-w-[20vw] h-[100%] relative flex justify-center items-center '>
                     <div className=' w-[80%] h-[80%] rounded-xl  flex justify-center items-center ' >
                         <div className='border border-white w-[80%] h-[80%] text-white flex flex-col justify-center items-center  rounded-xl   ' >
                             <p className='text-xl underline cursor-pointer italic ' onClick={handleRoomJoin} >Join existing call</p>
                             <p>Or</p>
-                            <button className='bg-white text-black rounded-full w-[60%] h-[20%] hover:bg-black border hover:text-white hover:border-white text-lg ' onClick={() => { if (dispCreateGroupPopUp === null) { setDispCreateGroupPopUp(true) } else { setDispCreateGroupPopUp(!dispCreateGroupPopUp) } }}  >Start New Call +</button>
+                            <button className='bg-white text-black rounded-full w-[40%] h-[15%] hover:bg-black border hover:text-white hover:border-white text-lg ' onClick={() => { if (dispCreateGroupPopUp === null) { setDispCreateGroupPopUp(true) } else { setDispCreateGroupPopUp(!dispCreateGroupPopUp) } }}  >Start New Call +</button>
                         </div>
                     </div>
                 </div>
@@ -136,25 +207,48 @@ export const VideoCallMainComponent: React.FC = () => {
 }
 
 
-export const RoomComponent: React.FC = ({userName}) => {
+export const RoomComponent: React.FC = ({ userName }) => {
     const params = useParams<{ tag: string; item: string }>()
-    const myMeeting = async (element)=>{
-      const appID=2010080204
-      const serverSecret = 'dec380ae8f61e199d65bfb7bf8f2b964'
-    //   const [currentUser, setCurrentUser] = useCookies(['username'])
-      const kitToken =  ZegoUIKitPrebuilt.generateKitTokenForTest(appID, serverSecret, params.roomId[0],userName,userName, 3600);
-      const zc = ZegoUIKitPrebuilt.create(kitToken)
-      zc.joinRoom({
-        container:element,
-        scenario:{
-          mode:ZegoUIKitPrebuilt.GroupCall,
-        },
-        showScreenSharingButton: true,
-      })
+    const [meetingId, setMeetingId] = useState<string>('')
+
+    const onJoinMeet = async () => {
+        setMeetingId(params.roomId[0])
+        try {
+            const response = await axios.post('http://localhost:4000/enterStartMeet', { username: userName, meetingId: params.roomId[0], startTime: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString() })
+            console.log(response)
+        } catch (e) { console.log(e) }
     }
+    const onLeaveMeet = async () => {
+        try {
+            const response = await axios.post('http://localhost:4000/enterEndMeet', { username: userName, meetingId: params.roomId[0], endTime: new Date().toLocaleTimeString() })
+            console.log(response)
+        } catch (e) { console.log(e) }
+    }
+    const myMeeting = async (element) => {
+        const { ZegoUIKitPrebuilt } = await import("@zegocloud/zego-uikit-prebuilt");
+        const appID = 2010080204
+        const serverSecret = 'dec380ae8f61e199d65bfb7bf8f2b964'
+        const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(appID, serverSecret, params.roomId[0], userName, userName, 3600);
+        const zc = ZegoUIKitPrebuilt.create(kitToken)
+        zc.joinRoom({
+            container: element,
+            scenario: {
+                mode: ZegoUIKitPrebuilt.GroupCall,
+            },
+            showScreenSharingButton: true,
+            onJoinRoom: () => { onJoinMeet() },
+            onLeaveRoom: () => { onLeaveMeet() },
+
+            // onInRoomMessageReceived: (messageInfo) => { console.log(messageInfo.fromUser.userName, messageInfo.message) }
+        })
+    }
+
+
     return (
-        <div>
-        <div ref={myMeeting} />
-      </div>
+        <>
+            <div style={{ height: "100vh", width: "100vw" }} >
+                <div style={{ height: "100vh", width: "100vw" }} ref={myMeeting} />
+            </div>
+        </>
     )
 }

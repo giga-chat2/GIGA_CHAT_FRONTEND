@@ -28,6 +28,25 @@
     height: 20% !important;
 }
 
+@keyframes float2 {
+	0% {
+		box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+		transform: translatey(0px);
+	}
+	50% {
+		box-shadow: 0 25px 15px 0px rgba(0,0,0,0.2);
+		transform: translatey(-20px);
+	}
+	100% {
+		box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+		transform: translatey(0px);
+	}
+}
+.clickHereAnimation2{
+  transform: translatey(0px);
+	animation: float2 2s ease-in-out infinite;
+}
+
 .multiSelectContainer li{
     background-color: #1e232c !important;
     color: white;
@@ -59,7 +78,7 @@
   --t: 10px; /* the size of the tail */
 
   
-  max-width: 300px;
+  max-width: 350px;
   padding: calc(2*var(--r)/3);
   -webkit-mask: 
     radial-gradient(var(--t) at var(--_d) 0,#0000 98%,#000 102%) 
@@ -102,6 +121,20 @@
   padding-right: 0px !important;
 }
 
+.multiselect-container{
+  width:400px !important
+}
+
+.search-wrapper, searchWrapper{
+  width:100% !important;
+} 
+
+.addMembersButton:hover{
+  background-color: white !important;
+  color: black !important;
+  border: black !important;
+}
+
 @keyframes appearFromCenter {
     from {
       transform: scale(0);
@@ -118,7 +151,7 @@
     display: flex !important;
     transform: scale(0);
     opacity: 0;
-    animation: appearFromCenter 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation: appearFromCenter 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   }
   
   @keyframes disappearToCenter {
@@ -135,7 +168,7 @@
   .disappear {
     transform-origin: center;
     display: flex !important;
-    animation: disappearToCenter 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+    animation: disappearToCenter 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
   }
   
   .createGrpButton{

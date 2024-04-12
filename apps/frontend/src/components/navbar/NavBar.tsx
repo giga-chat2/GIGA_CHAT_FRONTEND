@@ -17,20 +17,23 @@ import Swal from 'sweetalert2'
 import { useCookies } from 'react-cookie';
 import axios from 'axios';
 import { useRouter } from 'next/navigation'
-
+import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
+import ControlCameraIcon from '@mui/icons-material/ControlCamera';
+import { addToOnlineUsers, removeFromOnlineUsers } from '../allchats/AllChatsComponents';
 
 const NavBar = ({ defaultValue }) => {
   const [activeTab, setActiveTab] = useState<string>(defaultValue);
   const [isOpen, setIsOpen] = React.useState(false)
   const [emailCookie, setEmailCookie] = useCookies(['email' as string])
-  const [currentUser, setCurrentUser] = useCookies(['username'])
+  const [currentUser, setCurrentUser] = useCookies(['username' as string])
   const [profilePicPath, setProfilePicPath] = useCookies(['profilePicPath'])
   const [retrievedProfilePic, setRetrievedProfilePic] = useState<boolean>(false)
+  const [mobileView, setMobileView] = useCookies(['mobileView'])
 
 
   useEffect(() => {
     console.log("useefectse ", profilePicPath)
-    if (profilePicPath.profilePicPath !== "undefined") {
+    if (profilePicPath.profilePicPath !== "undefined" && profilePicPath.profilePicPath !== undefined && profilePicPath.profilePicPath !== "") {
       setRetrievedProfilePic(true)
     }
   }, [])
@@ -49,11 +52,12 @@ const NavBar = ({ defaultValue }) => {
       setIsOpen((prevState) => !prevState)
       return
     } else if (tab === "archieved") {
+      console.log("archieved")
       try {
         const response = await axios.post('http://localhost:4000/getArchivedUsers', { username: currentUser.username })
         const data = response.data
         console.log(data)
-        if (data.archivedUsers.length > 0) {
+        if (data.archivedUsers && data.archivedUsers.length > 0) {
           router.push('/pages/archieved')
           return
           // window.location.href = "/pages/archieve";
@@ -149,60 +153,276 @@ const NavBar = ({ defaultValue }) => {
       }
     })
   }
+  const [aiSuggestions, setAiAuggestions] = useCookies(['aiSuggestions'])
+  const [isAISuggestions, setIsAISuggestions] = useState<boolean>(aiSuggestions.aiSuggestions)
+
+  const handleAiSuggestions = async () => {
+    setAiAuggestions('aiSuggestions', !isAISuggestions, { path: '/' })
+    setIsAISuggestions(!isAISuggestions)
+    try {
+      const response = await axios.post('http://localhost:4000/updateAISuggestions', { currentUsername: currentUser.username })
+    } catch (err) {
+      console.log(err)
+    }
+  };
+  const [displayStatus, setDisplayStatus] = useCookies(['dispStatus' as string])
+  const [dispStatus, setDispStatus] = useState<boolean>(displayStatus.dispStatus)
+  const handleDispStatus = async () => {
+    if (!dispStatus) {
+      console.log("add wala")
+      addToOnlineUsers(!dispStatus, currentUser?.username)
+    } else {
+      console.log("remove wala")
+      removeFromOnlineUsers(!dispStatus, currentUser?.username)
+    }
+    setDisplayStatus('displayStatus', !dispStatus, { path: '/' })
+    setDispStatus(!dispStatus)
+    try {
+      await axios.post('http://localhost:4000/updateDisplayStatus', { currentUsername: currentUser.username })
+    } catch (err) {
+      console.log(err)
+    }
+  }
+
+  const inputRefs = Array.from({ length: 4 }, () => useRef(null));
+  const [enteredVerificationCode, setEnteredVerificationCode] = useState('');
+  const handlePaste = (ev: ClipboardEvent) => {
+    if ((ev.target as HTMLInputElement)?.localName !== 'input') return;
+    ev.preventDefault();
+    let paste = (ev.clipboardData || window.clipboardData).getData('text');
+    paste = paste.toUpperCase();
+    let inputs = inputRefs.map((ref) => ref.current);
+    if (paste.length !== inputs.length) return; // handle as you want
+    setEnteredVerificationCode(paste);
+    inputs.forEach((input, index) => {
+      input?.focus();
+      input.value = paste[index];
+    });
+  };
+
+  useEffect(() => {
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, []);
+
+  const handleInput = (e, index) => {
+    const value = e.target.value.toUpperCase();
+    setEnteredVerificationCode(prevState => {
+      const newCode = prevState.split('');
+      newCode[index] = value;
+      return newCode.join('');
+    });
+
+    if (value === '') {
+      inputRefs[index - 1]?.current?.focus();
+    } else {
+      inputRefs[index + 1]?.current?.focus();
+    }
+  };
+
+  const inputElements = [0, 1, 2, 3].map((index) => (
+    <input
+      key={index}
+      ref={inputRefs[index]}
+      type='text'
+      className='code__input'
+      autoFocus={index === 0}
+      maxLength={1}
+      value={enteredVerificationCode[index] || ''}
+      onChange={(e) => handleInput(e, index)}
+    />
+  ));
+
+  const [dispCodeDiv, setDispCodeDiv] = useState<boolean>(false)
+  const [hashedVerificationCode, setHashedVerificationCode] = useState<string>('')
+
+  const handleEmailChange = async () => {
+    if (!dispCodeDiv) {
 
 
+      if (email === emailCookie.email) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: 'Please enter a new email!',
+        })
+        return
+      } else if (email === "") {
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: 'Please enter a email!',
+        })
+        return
+      } else if (!email.includes('@') || !email.includes('.')) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: 'Please enter a valid email!',
+        })
+        return
+      } else {
+        setDispCodeDiv(true)
+        try {
+          const response = await axios.post('http://localhost:4000/sentCode', { email: email })
+          if (response.status === 200) {
+            setHashedVerificationCode(response.data.verificationCode)
+          }
+          const Toast = Swal.mixin({
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 1000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+              toast.onmouseenter = Swal.stopTimer;
+              toast.onmouseleave = Swal.resumeTimer;
+            }
+          });
+          Toast.fire({
+            icon: "success",
+            title: "Verification Code Sent Successfully!"
+          });
+        } catch (err) {
+          console.log(err)
+        }
+      }
+    } else {
+      if (enteredVerificationCode.length !== 4) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: 'Please enter a valid verification code!',
+        })
+        return
+      } else {
+        try {
+          const response = await axios.post('http://localhost:4000/updateEmail', { oldEmail: emailCookie.email, newEmail: email, verificationCode: enteredVerificationCode, hashedVerificationCode: hashedVerificationCode })
+          console.log(response.status)
+          if (response.status === 200) {
+            setDispCodeDiv(false)
+            setEmailCookie('email', email, { path: '/' })
+            Swal.fire({
+              icon: 'success',
+              title: 'Email Updated Successfully!',
+            })
+          }
+          else if (response.status === 201) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: 'Email already in use by some other user!',
+            })
+          }
+          else if (response.status === 202) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: 'Invalid Verification Code!',
+            })
+          }
+        } catch (err) {
+          console.log(err)
+        }
+      }
+      return
+    }
+  }
 
 
   return (
     <>
-      <div className='w-[15vw] h-screen bg-black flex flex-col items-center'>
-        <div className='w-[100%] h-[10%] flex  items-center' >
-          <Image src="/images/giga-coder-logo.png" width={150} height={150} alt="" className=' ml-5' />
-        </div>
-
-        <div className='w-[100%] h-[10%] flex items-center px-5  parent '>
-          <Link href="/pages/allchats" className='w-[100%] h-[100%] flex items-center ' >
-            <ForumIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "allchats" ? 'active' : ''} `} />
-            <p className={`text-[#666666] font-thin child ${activeTab === "allchats" ? "active" : ""} `} >All Chats</p>
+      {!mobileView.mobileView ? <>
+        <div className='w-[15vw] h-screen bg-black flex flex-col items-center'>
+          <div className='w-[100%] h-[10%] flex  items-center' >
+            <Image src="/images/giga-coder-logo.png" width={150} height={150} alt="" className=' ml-5' />
+          </div>
+          <Link href="/pages/allchats" className='w-[100%] h-[10%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex items-center px-5  parent ' >
+              <ForumIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "allchats" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "allchats" ? "active" : ""} `} >All Chats</p>
+            </div>
           </Link>
-        </div>
-
-        <div className='w-[100%] h-[10%] flex items-center px-5 parent' >
-          <Link href="/pages/groups" className='w-[100%] h-[100%] flex items-center ' >
-            <GroupsIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "groups" ? 'active' : ''} `} />
-            <p className={`text-[#666666] font-thin child ${activeTab === "groups" ? "active" : ""} `} >Groups</p>
-          </Link>
-        </div>
-        <div className='w-[100%] h-[10%] flex items-center px-5 parent' onClick={() => handleTabClick("archieved")} >
-          {/* <Link href="/pages/archieve" className='w-[100%] h-[100%] flex items-center ' > */}
-          <ArchiveIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "archieved" ? 'active' : ''} `} />
-          <p className={`text-[#666666] font-thin child ${activeTab === "archieved" ? "active" : ""} `}>Archived</p>
-          {/* </Link> */}
-        </div>
-        <div className='w-[100%] h-[10%] flex items-center px-5 parent' >
-          <Link href="/pages/askAi" className='w-[100%] h-[100%] flex items-center ' >
-            <PsychologyIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "askAi" ? 'active' : ''} `} />
-            <p className={`text-[#666666] font-thin child ${activeTab === "askAi" ? "active" : ""} `}>
-              Ask AI</p>
-          </Link>
-        </div>
-        <div className='w-[100%] h-[10%] flex items-center px-5 parent' onClick={() => handleTabClick("videoCall")} >
-          <Link href="/pages/videoCall" className='w-[100%] h-[100%] flex items-center ' >
-            <VideoChatIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "videoCall" ? 'active' : ''} `} />
-            <p className={`text-[#666666] font-thin child ${activeTab === "videoCall" ? "active" : ""} `}>Video Call</p>
+          <Link href="/pages/groups" className='w-[100%] h-[10%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex items-center px-5 parent' >
+              <GroupsIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "groups" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "groups" ? "active" : ""} `} >Groups</p>
+            </div>
           </Link>
 
-        </div>
-        <div className='w-[100%] h-[10%] flex items-center px-5 mt-auto parent' onClick={() => handleTabClick("settings")} >
-          <SettingsIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "settings" ? 'active' : ''} `} />
-          <p className={`text-[#666666] font-thin child ${activeTab === "settings" ? "active" : ""} `} >
-            Settings</p>
+          <div className='w-[100%] h-[10%] flex items-center px-5 parent' onClick={() => handleTabClick("archieved")} >
+            {/* <Link href="/pages/archieve" className='w-[100%] h-[100%] flex items-center ' > */}
+            <ArchiveIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "archieved" ? 'active' : ''} `} />
+            <p className={`text-[#666666] font-thin child ${activeTab === "archieved" ? "active" : ""} `}>Archived</p>
+            {/* </Link> */}
+          </div>
+          <Link href="/pages/askAi" className='w-[100%] h-[10%] flex items-center ' >
+
+            <div className='w-[100%] h-[100%] flex items-center px-5 parent' >
+              <PsychologyIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "askAi" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "askAi" ? "active" : ""} `}>
+                Ask AI</p>
+            </div>
+          </Link>
+          <Link href="/pages/videoCall" className='w-[100%] h-[10%] flex items-center ' >
+
+            <div className='w-[100%] h-[100%] flex items-center px-5 parent' onClick={() => handleTabClick("videoCall")} >
+              <VideoChatIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "videoCall" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "videoCall" ? "active" : ""} `}>Video Call</p>
+
+            </div>
+          </Link>
+
+          <div className='w-[100%] h-[10%] flex items-center px-5 mt-auto parent' onClick={() => handleTabClick("settings")} >
+            <SettingsIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "settings" ? 'active' : ''} `} />
+            <p className={`text-[#666666] font-thin child ${activeTab === "settings" ? "active" : ""} `} >
+              Settings</p>
+
+          </div>
+        </div >
+      </> : <>
+        <div className='w-[100%] h-[10%] flex justify-center items-center border-t border-white ' >
+          <Link href="/pages/allchats" className='w-[20%] h-[100%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex flex-col justify-center items-center px-5  parent ' >
+              <ForumIcon sx={{ color: "#666666", width: "1.5rem", height: "1.5rem", marginBottom: "1%" }} className={`child  ${activeTab === "allchats" ? 'active' : ''} `} />
+              <p className={`text-[#666666] w-[60px] text-center font-thin text-xs child ${activeTab === "allchats" ? "active" : ""} `} >All Chats</p>
+            </div>
+          </Link>
+          <Link href="/pages/groups" className='w-[20%] h-[100%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex flex-col justify-center items-center px-5 parent' >
+              <GroupsIcon sx={{ color: "#666666", width: "1.5rem", height: "1.5rem", marginBottom: "1%" }} className={`child  ${activeTab === "groups" ? 'active' : ''} `} />
+              <p className={`text-[#666666] w-[50px] text-center font-thin text-xs child ${activeTab === "groups" ? "active" : ""} `} >Groups</p>
+            </div>
+          </Link>
+          <Link href="" className='w-[20%] h-[100%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex flex-col justify-center items-center px-5 parent' onClick={() => handleTabClick("archieved")} >
+              <ArchiveIcon sx={{ color: "#666666", width: "1.5rem", height: "1.5rem", marginBottom: "1%" }} className={`child  ${activeTab === "archieved" ? 'active' : ''} `} />
+              <p className={`text-[#666666] w-[50px] text-center font-thin text-xs child ${activeTab === "archieved" ? "active" : ""} `}>Archived</p>
+            </div>
+          </Link>
+          <Link href="/pages/askAi" className='w-[20%] h-[100%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex flex-col justify-center items-center px-5 parent' >
+              <PsychologyIcon sx={{ color: "#666666", width: "1.5rem", height: "1.5rem", marginBottom: "1%" }} className={`child  ${activeTab === "askAi" ? 'active' : ''} `} />
+              <p className={`text-[#666666] w-[50px] text-center font-thin text-xs child ${activeTab === "askAi" ? "active" : ""} `}>
+                Ask AI</p>
+            </div>
+          </Link>
+          <Link href="/pages/videoCall" className='w-[20%] h-[100%] flex items-center ' >
+            <div className='w-[100%] h-[100%] flex flex-col justify-center items-center px-5 parent ' onClick={() => handleTabClick("videoCall")} >
+              <VideoChatIcon sx={{ color: "#666666", width: "1.5rem", height: "1.5rem" }} className={`child  ${activeTab === "videoCall" ? 'active' : ''} `} />
+              <p className={`text-[#666666] w-[60px] text-center font-thin text-xs child ${activeTab === "videoCall" ? "active" : ""} `}>Video Call</p>
+            </div>
+          </Link>
+          {/* <div className='w-[16%] h-[100%] flex flex-col items-center px-5 parent border border-white' onClick={() => handleTabClick("settings")} >
+            <SettingsIcon sx={{ color: "#666666", width: "1.5rem", height: "1.5rem" }} className={`child  ${activeTab === "settings" ? 'active' : ''} `} />
+            <p className={`text-[#666666] w-[160%] font-thin text-xs child ${activeTab === "settings" ? "active" : ""} `} >
+              Settings</p>
+            </div> */}
 
         </div>
-
-
-
-      </div >
+      </>}
 
       <Drawer
         open={isOpen}
@@ -215,7 +435,6 @@ const NavBar = ({ defaultValue }) => {
           <div className='w-[150px] h-[150px] border border-white overflow-hidden rounded-full flex justify-center items-center cursor-pointer ' onClick={handleIconClick} >
             {/* {profilePicPath.profilePicPath ? */}
             {retrievedProfilePic ? <>
-
               <img
                 src={selectedImage ? selectedImage : `http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
                 alt="profile"
@@ -248,19 +467,69 @@ const NavBar = ({ defaultValue }) => {
           <p className='text-center text-white mt-2 font-semibold text-medium font-sans ' >Upload your profile picture</p>
         </div>
 
-        <div className='w-[100%] h-[70%] border-none '>
-          <div className='w-[100%] h-[10%] flex justify-center items-center border-none input-group '>
-            <input type="text" required value={userName} onChange={(e) => setUserName(e.target.value)} />
-            <label >Change UserName</label>
+        <div className='w-[100%] h-[70%] border-none flex flex-col '>
+          <div className={`w-[100%] h-[10%] flex justify-center items-center border-none input-group ${dispCodeDiv ? 'animate-up' : ''} `}>
+            <input type="text" required value={userName} onChange={() => setUserName(userName)} />
+            <label >UserName</label>
           </div>
-          <div className='w-[100%] h-[10%] flex justify-center items-center border-none input-group '>
+          <div className={`w-[100%] h-[10%] z-20 flex justify-center items-center border-none input-group ${dispCodeDiv ? 'animate-up' : ''} `}>
             <input type="text" required value={email} onChange={(e) => setEmail(e.target.value)} />
             <label >Change Email</label>
           </div>
-          <div className='w-[100%] h-[10%] flex justify-center items-center border-none input-group '>
-            <button className='w-[92%] h-[90%] text-[#1e232c] bg-white font-sans changeDetailBtn rounded ' >Submit</button>
+          <div className='verification_code_container' >
+            <div id="codeForm" >
+              {[0, 1, 2, 3].map((index) => (
+                <input
+                  key={index}
+                  ref={inputRefs[index]}
+                  type='number'
+                  className='code__input'
+                  autoFocus={index === 0}
+                  maxLength={1}
+                  onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const target = e.target as HTMLInputElement;
+                    target.value = e.target.value.toUpperCase();
+
+                    setEnteredVerificationCode(inputRefs.map(ref => ref.current?.value).join(''));
+
+                    if (target.value === '') {
+                      inputRefs[index - 1]?.current?.focus();
+                    } else {
+                      inputRefs[index + 1]?.current?.focus();
+                    }
+                  }}
+                />
+              ))}
+            </div>
           </div>
-          <div className='w-[100%] h-[30%] border-t flex flex-col  ' >
+          <div className={`w-[100%] h-[10%] flex justify-center items-center border-none input-group2 ${dispCodeDiv ? 'animate-down' : ''} `}>
+            <button className='w-[92%] h-[90%] text-[#1e232c] bg-white font-sans changeDetailBtn rounded ' onClick={handleEmailChange} >{dispCodeDiv ? 'Submit Code' : 'Change Email'}</button>
+          </div>
+          <div className='w-[100%] h-[20%] border-t border-white  justify-center items-center flex flex-col ' >
+            <div className='w-[100%] h-[50%] flex justify-center items-center ' >
+              <div className='w-[100%] h-[100%] flex items-center ml-[15%] ' >
+                <TipsAndUpdatesIcon sx={{ padding: "0%", color: "white", width: "15%", height: "50%" }} />
+                <p className='text-white text-2xl font-semibold' >AI-Suggestions</p>
+                <button className=" toggle-switch1" onClick={handleAiSuggestions}>
+                  <input type="checkbox" checked={isAISuggestions} onChange={() => { }} />
+                  <span className="slider1 round1"></span>
+                </button>
+
+              </div>
+            </div>
+            <div className='w-[100%] h-[50%] flex ' >
+              <div className='w-[100%] h-[100%] flex items-center ml-[15%] ' >
+                <ControlCameraIcon sx={{ padding: "0%", color: "white", width: "15%", height: "50%" }} />
+                <p className='text-white text-2xl font-semibold mr-4' >Display Status</p>
+                <button className=" toggle-switch2" onClick={handleDispStatus}>
+                  <input type="checkbox" checked={dispStatus} onChange={() => { }} />
+                  <span className="slider2 round2"></span>
+                </button>
+
+              </div>
+            </div>
+          </div>
+          <div className='w-[100%] h-[20%] border-t flex flex-col  ' >
             <div className='w-[100%] flex flex-col justify-center items-center h-[40%] border-none text-center text-white ' >
               <p>Our Socials</p>
 
@@ -280,7 +549,7 @@ const NavBar = ({ defaultValue }) => {
               </a>
             </div>
           </div>
-          <div className='w-[100%] h-[20%] flex  items-center cursor-pointer  border-t border-white signoutdiv ' onClick={handleSignOut} >
+          <div className='w-[100%] h-[15%] flex  items-center cursor-pointer  border-t border-white signoutdiv ' onClick={handleSignOut} >
             <ExitToAppIcon style={{ color: "white", width: "15%", height: "40%", padding: "-10px", margin: "0" }} />
             <p className='text-white text-lg font-light ' >Sign-Out</p>
           </div>

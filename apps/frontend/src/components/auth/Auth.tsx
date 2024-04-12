@@ -1,7 +1,8 @@
+"use client"
 import React from 'react'
 import './index.css'
 import { MoveToSignInButton ,MoveToSignUpButton,SignInForm ,SignUpForm} from './AuthComponents'
-
+import { useEffect } from 'react'
 
 
 const Auth:React.FC = () => {

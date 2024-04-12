@@ -466,6 +466,33 @@ main.sign-up-mode .carousel {
   background-color: #1a46c9 !important;
 }
 
+@keyframes float3 {
+	0% {
+		box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+		transform: translatex(0px);
+	}
+	50% {
+		box-shadow: 0 25px 15px 0px rgba(0,0,0,0.2);
+		transform: translatex(-20px);
+	}
+	100% {
+		box-shadow: 0 5px 15px 0px rgba(0,0,0,0.6);
+		transform: translatex(0px);
+	}
+}
+.clickHereAnimation3{
+  margin-top: 200px !important; /* Adjust margin as needed */
+  transform: translatex(0px);
+	animation: float3 2s ease-in-out infinite;
+}
+
+.deleteIconAskAi:hover{
+  cursor: pointer;
+  /* border: 1px solid white; */
+  color: gray;
+}
+
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
