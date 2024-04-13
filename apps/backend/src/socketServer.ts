@@ -69,7 +69,6 @@ let count = 0;
 let rooms = {}
 
 io.on('connection', (socket) => {
-  console.log('a user connected', socket?.handshake?.auth?.token);
   try {
     socket.on('send_RoomId', (data) => {
       const { roomId, email, sender, receiver } = data;
@@ -79,7 +78,6 @@ io.on('connection', (socket) => {
       socket.broadcast.emit('onlineUsers', data);
     });
     socket.on('remove_online', (data) => {
-      console.log('remove_online', data);
       socket.broadcast.emit('remove_online', data);
     })
 
@@ -88,21 +86,36 @@ io.on('connection', (socket) => {
     })
 
     socket.on('voice_message', (data) => {
-      console.log('voice_message', data)
-      socket.to(data.roomId).emit('receive_voice_message', data)
+      socket.broadcast.emit('receive_voice_message', data)
     })
 
     socket.on('send_Message', (data) => {
-      socket.to(data.room_Id).emit('receive_Message', {
+      socket.broadcast.emit('receive_Message', {
         message: data.message,
-        sender: data.user,
-        profilePic: data.profilePic,
+        sender: data.sender,
+        receiver: data.receiver,
         email: data.email,
         roomId: data.room_Id,
       });
       console.log('current members in room', rooms[data.room_Id], 'message from', data.user, 'message', data.message)
       console.log(rooms)
     });
+
+    socket.on('private_send_Message', (data) => {
+      socket.to(data.room_Id).emit('receive_Message', {
+        message: data.message,
+        sender: data.sender,
+        receiver: data.receiver,
+        email: data.email,
+        roomId: data.room_Id,
+      });
+      console.log('current members in room', rooms[data.room_Id], 'message from', data.user, 'message', data.message)
+      console.log(rooms)
+    });
+
+    socket.on('send_grp_message',(data)=>{
+      socket.broadcast.emit('receive_grp_message',data)
+    })
 
     socket.on('join_Room', (data) => {
       if (data) {
@@ -125,22 +138,20 @@ io.on('connection', (socket) => {
       const { room_Id, username } = data
       if(rooms[room_Id] === undefined) return
       rooms[room_Id] = rooms[room_Id].filter(user => user !== username)
-      console.log(username, 'left room', room_Id)
       socket.leave(room_Id);
     })
 
     socket.on('disconnect', async () => {
       try {
         const username = socket?.handshake?.auth?.token
-        console.log('username ', username)
         await connect()
         const user = await OnlineUser.findOne({});
         if (user?.onlineUsers?.length > 0) {
           user.onlineUsers = user.onlineUsers.filter(user => user !== username);
           await user.save();
+          console.log('user disconnected', user.onlineUsers, username)
         }
         socket.broadcast.emit('newOnlineUsers', { onlineUsers: user.onlineUsers });
-        console.log('user disconnected', socket?.handshake?.auth?.token);
       } catch (e) { console.log(e) }
     });
 

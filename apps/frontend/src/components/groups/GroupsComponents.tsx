@@ -28,6 +28,8 @@ import NotificationAddIcon from '@mui/icons-material/NotificationAdd';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import AddReactionIcon from '@mui/icons-material/AddReaction';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+
 
 type Event = MouseEvent | TouchEvent;
 
@@ -56,6 +58,17 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
 
 
 const socket = io('http://localhost:5000')
+
+function getCookieValue(cookieName: string) {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(cookieName + '=')) {
+            return cookie.substring(cookieName.length + 1);
+        }
+    }
+    return null;
+}
 
 export const MainComponent: React.FC = () => {
     const [results, setResults] = useState<object>()
@@ -90,27 +103,50 @@ export const MainComponent: React.FC = () => {
     const [idx, setIdx] = useState<number>(0)
     // const [groupRoomIdCookie, setGroupRoomIdCookie] = useCookies(['groupRoomId'])
     const [roomID, setRoomID] = useCookies(['roomID'])
+    const [currentGroupName, setCurrentGroupName] = useCookies(['currentGroupName'])
 
 
     useEffect(() => {
         if (socket) {
-            if (!socket.hasListeners('receive_Message')) {
+            // if (!socket.hasListeners('receive_Message')) {
 
-                socket.on('receive_Message', (data) => {
-                    console.log(data.email, emailCookie.email, data.roomId, "HUHU", roomID.roomID)
-                    if (data.roomId === roomID.roomID) {
-                        console.log("inside")
-                        setRecievedMessage(data.message)
-                        setSender(data.user)
-                        setSenderProfilePic(data.profilePic)
-                    }
-                })
-            }
-            socket.on('receive_voice_message', (data) => {
+            //     // socket.on('receive_Message', (data) => {
+            //     //     console.log(data.email, emailCookie.email, data.roomId, "HUHU", roomID.roomID)
+            //     //     if (data.roomId === roomID.roomID) {
+            //     //         console.log("inside")
+            //     //         setRecievedMessage(data.message)
+            //     //         setSender(data.user)
+            //     //         setSenderProfilePic(data.profilePic)
+            //     //     }
+            //     // })
+            // }
+
+            socket.on('receive_grp_message', (data) => {
                 console.log(data)
-                setSender(data.user)
-                setSenderProfilePic(data.profilePic)
-                setVoiceNote(data.audioURL)
+                if (data.groupName === getCookieValue('currentGroupName')) {
+                    setRecievedMessage(data.message)
+                    setSender(data.sender)
+                    setSenderProfilePic(data.profilePic)
+                }
+                // console.log(data)
+                // setRecievedMessage(data.message)
+                // setSender(data.sender)
+                // setSenderProfilePic(data.profilePic)
+            })
+
+            // socket.on('receive_voice_message', (data) => {
+            //     // console.log(data)
+            //     setSender(data.user)
+            //     setSenderProfilePic(data.profilePic)
+            //     setVoiceNote(data.audioURL)
+            // })
+
+            socket.on('receive_voice_message', (data) => {
+                if (data.groupName === getCookieValue('currentGroupName')) {
+                    setSender(data.sender)
+                    setSenderProfilePic(data.profilePic)
+                    setVoiceNote(data.audioURL)
+                }
             })
 
             socket.on("check_RoomId", (data) => {
@@ -162,6 +198,7 @@ export const MainComponent: React.FC = () => {
             setPlaceholderVal('Enter your message and hit "Enter"')
         }
     }
+
     const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
     useEffect(() => {
         if (firstTimeLoaded) {
@@ -173,12 +210,6 @@ export const MainComponent: React.FC = () => {
             setMessages((prevMessages) => [{ message: recievedMessage, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
             setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
         }
-        // else {
-        //     console.log(recievedMessage,messages)
-        //     setMessages([{ message: recievedMessage, isSender: false }])
-        //     setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
-        //     // setOpenAiChats([{ role: "assistant", content: recievedMessage }])
-        // }
     }, [recievedMessage]);
 
     const fetchData = async () => {
@@ -202,7 +233,7 @@ export const MainComponent: React.FC = () => {
                 setResults(groupsNotInSelected);
                 setOptions(data.selectedUsers)
                 setCurrentUser(data.currentUser)
-                handleGroupClick(0)
+                handleGroupClick(0, reversedSelectedGroups[0]?.groupName, reversedSelectedGroups[0]?.roomId)
             })
         } catch (e) {
             console.log(e)
@@ -282,19 +313,25 @@ export const MainComponent: React.FC = () => {
     const [selectedDetailedGroupMembers, setSelectedDetailedGroupMembers] = useState<object[]>([])
 
 
-    const handleGroupClick = async (index: number) => {
+    const handleGroupClick = async (index: number, initialSelectedGroupName: any = null, room_ka_ID: any = null) => {
         setIdx(index)
         console.log(selectedGroups, selectedGroups[index])
-        if (roomID.roomID && roomID.roomID !== '' && roomID.roomID !== 'undefined' && socket) {
-            console.log(currentUserName?.username,roomID.roomID.toString() )
-            socket.emit("leave_Room", { room_Id: roomID.roomID.toString(), username: currentUserName?.username });
+        if (initialSelectedGroupName) {
+            setCurrentGroupName('currentGroupName', initialSelectedGroupName, { path: '/' })
         }
-        setRoomId(selectedGroups[index]?.roomId)
-        if (selectedGroups[index]) {
-            setRoomID('roomID', selectedGroups[index]?.roomId, { path: '/' })
-        }
+        // if (roomID.roomID && roomID.roomID !== '' && roomID.roomID !== 'undefined' && socket) {
+        //     console.log(currentUserName?.username,roomID.roomID.toString() )
+        //     socket.emit("leave_Room", { room_Id: roomID.roomID.toString(), username: currentUserName?.username });
+        // }
+
+        // if (selectedGroups[index]?.groupName) {
+        setRoomId(room_ka_ID)
+        // }
+        // if (selectedGroups[index]) {
+        //     setRoomID('roomID', selectedGroups[index]?.roomId, { path: '/' })
+        // }
         try {
-            const response = await axios.post('http://localhost:4000/getGroupChats', { groupName: selectedGroups[index]?.groupName })
+            const response = await axios.post('http://localhost:4000/getGroupChats', { groupName: initialSelectedGroupName })
             setMessages(response.data.chats)
         } catch (e) { console.log(e) }
 
@@ -304,10 +341,10 @@ export const MainComponent: React.FC = () => {
         setUserClicked(index);
 
 
-        if (socket) {
-            socket.emit("join_Room", { room_Id: selectedGroups[index]?.roomId.toString(), username: currentUserName?.username });
-            console.log("sender joining room")
-        }
+        // if (socket) {
+        //     socket.emit("join_Room", { room_Id: selectedGroups[index]?.roomId.toString(), username: currentUserName?.username });
+        //     console.log("sender joining room")
+        // }
     }
 
     const onChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -316,8 +353,8 @@ export const MainComponent: React.FC = () => {
         setMessages((prevMessages) => [{ message: typedMessage, sender: currentUser.username }, ...prevMessages])
         if (socket) {
             setTypedMessage('')
-            socket.emit("send_Message", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, room_Id: selectedGroups[idx].roomId, user: currentUser?.username, email: emailCookie.email });
-
+            // socket.emit("send_Message", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, room_Id: selectedGroups[idx].roomId, user: currentUser?.username, email: emailCookie.email });
+            socket.emit("send_grp_message", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, sender: currentUserName?.username, groupName: selectedGroups[idx]?.groupName })
         }
         const res = await fetch('http://localhost:4000/addChatInGroup', {
             method: 'POST',
@@ -330,6 +367,7 @@ export const MainComponent: React.FC = () => {
                 console.log('Message sent successfully.')
             }
         })
+        handleAiSuggestion("user", "Provide output in maximum 10 words for the follow up :" + typedMessage)
         // if (messages) {
         //     setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
         //     setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
@@ -379,7 +417,7 @@ export const MainComponent: React.FC = () => {
     const handleContextMenu = (e: React.MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => {
         e.preventDefault()
         const { pageX, pageY } = e
-        setContextMenu({ show: true, x: pageX, y: pageY })
+        setContextMenu({ show: true, x: pageX - 150, y: pageY+30 })
     }
 
     const handleContextMenuClose = () => {
@@ -528,7 +566,7 @@ export const MainComponent: React.FC = () => {
                 const audioURL = data.audioURL;
                 setMessages((prevMessages) => [{ audioURL: audioURL, sender: currentUser?.username }, ...prevMessages])
                 if (socket) {
-                    socket.emit('voice_message', { audioURL: audioURL, roomId, profilePic: profilePicPath?.profilePicPath, user: currentUser?.username });
+                    socket.emit('voice_message', { audioURL: audioURL, groupName: selectedGroups[idx].groupName, profilePic: profilePicPath?.profilePicPath, user: currentUserName?.username });
                 }
 
             } catch (e) {
@@ -840,7 +878,7 @@ export const MainComponent: React.FC = () => {
                             </>}
                             <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
                                 {selectedGroups && selectedGroups.length > 0 ? selectedGroups?.map((user, index) => (
-                                    <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onContextMenu={handleContextMenu} onClick={() => handleGroupClick(index)} >
+                                    <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onContextMenu={handleContextMenu} onClick={() => handleGroupClick(index, user.groupName, user.roomId)} >
                                         <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === index ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
                                             <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                 <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
@@ -871,8 +909,43 @@ export const MainComponent: React.FC = () => {
                 </div>
                 {selectedGroups && selectedGroups.length > 0 ? <>
                     <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
-                        <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
-                            <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-y-auto ' >
+                        <div className='flex flex-col justify-center items-center w-[100%] h-[85%] relative '>
+                            <div className='flex justify-center items-center w-[100%] h-[15%]  ' >
+                                <div className=' flex w-[90%] h-[80%] border border-[#1e232c] rounded ' >
+                                    <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
+                                        <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
+                                            {selectedGroups[idx]?.profilePic ? <>
+                                                <img
+                                                    src={`http://localhost:4000/getprofilePic/${selectedGroups[idx]?.profilePic}`}
+                                                    alt="profile"
+                                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                />
+                                            </> : <>
+                                                <GroupsIcon sx={{ color: "white", width: "100%", height: "100%" }} />
+                                            </>}
+                                        </div>
+                                    </div>
+                                    <div className='w-[15%] h-[100%]  flex flex-col justify-center items-center ' >
+                                        <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                            <p className='w-[100%] h-[100%] flex justify-start items-center text-center text-white font-bold text-xl mt-3 ' >{selectedGroups[idx]?.groupName}</p>
+                                        </div>
+                                        <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                            <p className='w-[100%] h-[100%] flex justify-start items-center text-center  text-white font-thin text-sm italic ' >
+                                                {selectedGroups[idx].members && selectedGroups[idx].members.map((user, index) => (
+                                                    <p key={index} className="mr-2">
+                                                        {user.username}{index !== selectedGroups[idx].members.length - 1 && ','}
+                                                    </p>
+                                                ))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className='w-[10%] flex justify-center items-center h-[100%]  ml-auto ' >
+                                        <MoreVertIcon sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div className='relative flex flex-col-reverse w-[90%] h-[85%] border border-[#1e232c] rounded overflow-y-auto ' >
                                 {messages && messages.map((msg, index) => (
                                     <div className={`w-[450px] border-none h-[150px] mb-20 mt-2 flex border  ${msg.sender === currentUser.username ? ' ml-auto sender' : ''} `} >
                                         {msg.sender === currentUser.username ? <>

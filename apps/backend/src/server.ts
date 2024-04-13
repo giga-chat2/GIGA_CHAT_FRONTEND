@@ -11,6 +11,7 @@ import OpenAI from "openai";
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
 import Replicate from "replicate";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 const port = 4000;
@@ -201,6 +202,7 @@ app.post('/addUserInSelectedUsers', async (req: Request, res: Response) => {
 
 app.post("/addChat", async (req: Request, res: Response) => {
   try {
+    await connect();
     const { message, room_Id, email, selectedUserName } = req.body;
     const currentUserEmail = await User.findOne({ email: email });
     const currentUser = await SelectedUsers.findOne({ username: currentUserEmail?.username });
@@ -249,7 +251,14 @@ app.post("/getChats", async (req: Request, res: Response) => {
     const { currentUser, selectedUser } = req.body;
     const user = await SelectedUsers.findOne({ username: currentUser });
     const chats = user?.selectedUsers.find(user => user.username === selectedUser);
-    return res.status(200).json({ chats: chats?.chats, roomId: chats?.roomId , selectedUserPic: chats?.profilePic});
+    if (!chats) {
+      return res.status(404).json({ error: 'SelectedUser not found' });
+    }
+    console.log("before pending")
+    chats.pending = 0;
+    console.log("after pending")
+    await user?.save();
+    return res.status(200).json({ chats: chats?.chats, roomId: chats?.roomId, selectedUserPic: chats?.profilePic });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -257,14 +266,14 @@ app.post("/getChats", async (req: Request, res: Response) => {
 })
 
 app.post("/getGroupChats", async (req: Request, res: Response) => {
-  try{
-    const {groupName} = req.body;
-    const group = await Group .findOne({ groupName });
-    if(!group){
-      return res.status(404).json({error: 'Group not found'});
+  try {
+    const { groupName } = req.body;
+    const group = await Group.findOne({ groupName });
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
     }
-    return res.status(200).json({chats: group.messages});
-  }catch(e){ console.log(e) }
+    return res.status(200).json({ chats: group.messages });
+  } catch (e) { console.log(e) }
 })
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -274,14 +283,14 @@ const uploadFile = multer({ dest: 'public/audio' });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.post('/uploadAudio', uploadFile.single('audio'),async (req: Request, res: Response) => {
+app.post('/uploadAudio', uploadFile.single('audio'), async (req: Request, res: Response) => {
   try {
     const audioURL = `http://localhost:4000/audio/${req?.file?.filename}`;
     const { roomId, sender, receiver } = req.body
-    console.log(1,roomId,sender,receiver)
+    console.log(1, roomId, sender, receiver)
     await connect();
-    const currentUser =await SelectedUsers.findOne({ username: sender });
-    const receipentUser =await SelectedUsers.findOne({ username: receiver });
+    const currentUser = await SelectedUsers.findOne({ username: sender });
+    const receipentUser = await SelectedUsers.findOne({ username: receiver });
 
     if (!currentUser || !receipentUser) {
       console.log(2)
@@ -293,7 +302,7 @@ app.post('/uploadAudio', uploadFile.single('audio'),async (req: Request, res: Re
     if ((currentUser as any).selectedUsers) {
       console.log(3)
       currentUserSelectedUser = (currentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
-      
+
     }
     if ((receipentUser as any).selectedUsers) {
       console.log(4)
@@ -301,7 +310,7 @@ app.post('/uploadAudio', uploadFile.single('audio'),async (req: Request, res: Re
     }
 
     if (!currentUserSelectedUser || !receipentUserSelectedUser) {
-      console.log(5,currentUserSelectedUser,receipentUserSelectedUser)
+      console.log(5, currentUserSelectedUser, receipentUserSelectedUser)
       return res.status(404).json({ error: 'SelectedUser not found for the specified roomId' });
     }
 
@@ -320,19 +329,19 @@ app.post('/uploadAudio', uploadFile.single('audio'),async (req: Request, res: Re
   } catch (e) { console.log(e) }
 });
 
-app.post('/groupUploadAudio', uploadFile.single('audio'),async (req: Request, res: Response) => {
-  try{
+app.post('/groupUploadAudio', uploadFile.single('audio'), async (req: Request, res: Response) => {
+  try {
     const audioURL = `http://localhost:4000/audio/${req?.file?.filename}`;
-    const { roomId, profilePic,sender} = req.body
-    const group = await Group.findOne ({roomId: roomId});
-    if(!group){
-      return res.status(404).json({error: 'Group not found'});
+    const { roomId, profilePic, sender } = req.body
+    const group = await Group.findOne({ roomId: roomId });
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
     }
-    const chatObject = {audioURL: audioURL, profilePic:profilePic,sender: sender};
+    const chatObject = { audioURL: audioURL, profilePic: profilePic, sender: sender };
     group.messages.unshift(chatObject);
     await group.save();
-    res.status(200).send({audioURL});
-  }catch(e){
+    res.status(200).send({ audioURL });
+  } catch (e) {
     console.log(e)
   }
 })
@@ -421,6 +430,25 @@ app.post("/getInitlaData", async (req: Request, res: Response) => {
 })
 
 
+app.post("/addPendingMessages", async (req: Request, res: Response) => {
+  try {
+    const { recipient, currentUser } = req.body;
+
+    const user = await SelectedUsers.findOne({ username: currentUser });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const recipientUser = user?.selectedUsers.find(user => user.username === recipient);
+    if (!recipientUser) {
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+    recipientUser.pending = recipientUser.pending ? recipientUser.pending + 1 : 1;
+
+    await user?.save();
+    return res.status(200).json({ message: 'Pending messages added successfully' });
+  } catch (e) { console.log(e) }
+})
+
 
 app.post("/createGroup", async (req: Request, res: Response) => {
   try {
@@ -461,11 +489,11 @@ app.post("/sendRequestToJoinGroup", async (req: Request, res: Response) => {
   }
 })
 
-app.post('/addNewMembersToGroup',async (req: Request, res: Response) => {
+app.post('/addNewMembersToGroup', async (req: Request, res: Response) => {
   try {
     await connect();
     const { groupName, selectedGroupMembers } = req.body;
-    console.log(1,groupName,selectedGroupMembers)
+    console.log(1, groupName, selectedGroupMembers)
     const group = await Group.findOne({ groupName });
     if (!group) {
       console.log(2)
@@ -506,13 +534,16 @@ app.post("/addChatInGroup", async (req: Request, res: Response) => {
   try {
     await connect();
     const { message, profilePic, room_Id, currentUser } = req.body;
+    console.log(1, req.body)
     const group = await Group.findOne({ roomId: room_Id });
     if (!group) {
+      console.log(2)
       return res.status(404).json({ error: "Group not found" });
     }
     const chat = { message: message, profilePic: profilePic, sender: currentUser.username };
     group.messages.unshift(chat);
     await group.save();
+    console.log(3)
     return res.status(200).json({ message: "Chat added successfully" });
   } catch (error) {
     console.error(error);
@@ -585,7 +616,9 @@ app.post("/getArchivedUsers", async (req: Request, res: Response) => {
     const user = await SelectedUsers.findOne({ username });
     const archivedUsers = user?.selectedUsers.filter(user => user.isArchived);
     // console.log(archivedUsers, "archivedUsers")
-    return res.status(200).json({ archivedUsers: archivedUsers });
+    const onlineUsers = await OnlineUser.findOne({});
+    const onlineUsersArray = onlineUsers?.onlineUsers || [];
+    return res.status(200).json({ archivedUsers: archivedUsers, onlineUsers: onlineUsersArray });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -616,7 +649,7 @@ app.post("/modelResponse", async (req: Request, res: Response) => {
       temperature: 0,
     });
     return res.status(200).json({ message: gptResponse.choices[0].text });
-  } else if (model === "google") {
+  } else if (model === "gemma") {
     const response = await axios.post("https://api-inference.huggingface.co/models/google/gemma-7b", { inputs: message }, { headers: { Authorization: process.env.NEXT_HUGGING_FACE_KEY } });
     const result = await response.data;
     const generatedText = result[0].generated_text;
@@ -652,6 +685,13 @@ app.post("/modelResponse", async (req: Request, res: Response) => {
     const extractedText = generatedText.slice(questionIndex + message.length).trim();
     console.log(extractedText, "result");
     return res.status(200).json({ message: extractedText });
+  } else if (model === "gemini") {
+    const genAI = new GoogleGenerativeAI(process.env.NEXT_GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const result = await model.generateContent(message);
+    const response = await result.response;
+    const text = response.text();
+    return res.status(200).json({ message: text });
   }
 })
 
@@ -826,7 +866,6 @@ app.post('/addToOnlineUsers', async (req: Request, res: Response) => {
 
 app.post('/removeFromOnlineUsers', async (req: Request, res: Response) => {
   try {
-    console.log(1)
     const { username } = req.body;
     await connect();
     const user = await OnlineUser.findOne({});
@@ -919,19 +958,16 @@ app.post('/updateEmail', async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(verificationCode, hashedVerificationCode);
     console.log(isMatch, "isMatch")
     if (isMatch) {
-      console.log(1)
       await connect();
 
       const allUsers = await User.find({});
       const checkEmail = allUsers.filter(user => user.email === newEmail);
       if (checkEmail.length > 0) {
-        console.log(2)
         return res.status(201).json({ message: "Email already in use by some other user " });
       }
 
       const currentUser = await User.findOne({ email: oldEmail });
       if (!currentUser) {
-        console.log(3)
         return res.status(204).json({ message: "User not found" });
       }
       currentUser.email = newEmail;
@@ -945,10 +981,8 @@ app.post('/updateEmail', async (req: Request, res: Response) => {
         await user.save();
       }
       await currentUser.save();
-      console.log(4)
       return res.status(200).json({ message: "Email updated successfully" });
     } else {
-      console.log(5)
       return res.status(202).json({ message: "Invalid verification code" });
     }
   } catch (e) {

@@ -96,6 +96,10 @@ const selectedUsersSchema = new Schema({
         type: Date,
         required: false
       },
+      pending:{
+        type:Number,
+        required:false
+      },
       chats: [
         {
           audioURL: {

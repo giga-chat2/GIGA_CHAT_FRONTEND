@@ -79,7 +79,7 @@ export const MainComponent: React.FC = () => {
         });
         Toast.fire({
             icon: "success",
-            title: `${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'google' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : null} choosed Successfully!`
+            title: `${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'gemma' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : modelName === 'gemini' ? 'Gemini-Pro' :  null } choosed Successfully!`
         });
         setBtnCount(btnNumber)
         setModel(modelName)
@@ -92,16 +92,16 @@ export const MainComponent: React.FC = () => {
                 sessionStorage.setItem('sessionId', session as string)
                 // setSessionNumber('sectionNumber', session, { path: '/' })
             }
-            setMessages([{ model: modelName, isSender: false, message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'google' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : null} your AI assistant. How can I help you?` }])
+            setMessages([{ model: modelName, isSender: false, message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'gemma' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : modelName === 'gemini' ? 'Gemini-Pro' :  null} your AI assistant. How can I help you?` }])
         } else {
             session = sessionStorage.getItem('sessionId');
-            setMessages((prevChats) => [{ model: modelName, isSender: false, message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'google' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : null} your AI assistant. How can I help you?` }, ...prevChats])
+            setMessages((prevChats) => [{ model: modelName, isSender: false, message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'gemma' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : modelName === 'gemini' ? 'Gemini-Pro' :  null} your AI assistant. How can I help you?` }, ...prevChats])
             setDropdownClicked(false)
         }
         try {
             const now = new Date();
             const currentTime = `${now.getMinutes()}:${now.getSeconds()}`;
-            const res = await axios.post("http://localhost:4000/addAIChat", { message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'google' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : null} your AI assistant. How can I help you?`, session: session, currentUsername: currentUser?.username, model: modelName, startingTime: currentTime, endingTime: currentTime, isSender: false })
+            const res = await axios.post("http://localhost:4000/addAIChat", { message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'gemma' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : modelName === 'gemini' ? 'Gemini-Pro' :  null} your AI assistant. How can I help you?`, session: session, currentUsername: currentUser?.username, model: modelName, startingTime: currentTime, endingTime: currentTime, isSender: false })
             const data = res.data
             console.log(data)
         } catch (e) {
@@ -175,13 +175,17 @@ export const MainComponent: React.FC = () => {
             setBtnCount(3)
             setModel('meta')
         }
-        else if (chatHistory[idx]?.messages[chatHistory[idx]?.messages.length - 1].model === 'google') {
+        else if (chatHistory[idx]?.messages[chatHistory[idx]?.messages.length - 1].model === 'gemma') {
             setBtnCount(4)
-            setModel('google')
+            setModel('gemma')
         }
         else if (chatHistory[idx]?.messages[chatHistory[idx]?.messages.length - 1].model === 'mistral') {
             setBtnCount(5)
             setModel('mistral')
+        }
+        else if (chatHistory[idx]?.messages[chatHistory[idx]?.messages.length - 1].model === 'gemini') {
+            setBtnCount(5)
+            setModel('gemini')
         }
 
     }
@@ -291,7 +295,7 @@ export const MainComponent: React.FC = () => {
                         <div className={`w-[20%] h-[80%] relative  rounded-s-lg text-white flex flex-col justify-center items-center cursor-pointer bg-[${btnCount === 1 ? "#1a46c9" : "#1e52ee"}] hover:bg-[#1a46c9] model-box `} onClick={() => handleModelChoose(true, 1, "openai")} ><p className='font-bold' >GPT 3.5 turbo</p> <p className='font-thin italic' >Open AI</p> </div>
                         <div className={`w-[20%] h-[80%] relative border-x border-white text-white flex flex-col justify-center items-center cursor-pointer bg-[${btnCount === 2 ? "#1a46c9" : "#1e52ee"}] hover:bg-[#1a46c9] model-box `} onClick={() => handleModelChoose(true, 2, "antrophic")} ><p className='font-bold' >Claude 2</p> <p className='font-thin italic' >Antrophic</p> </div>
                         <div className={`w-[20%] h-[80%] relative  border-e border-white text-white flex flex-col justify-center items-center cursor-pointer bg-[${btnCount === 3 ? "#1a46c9" : "#1e52ee"}] hover:bg-[#1a46c9] model-box `} onClick={() => handleModelChoose(true, 3, "meta")} ><p className='font-bold' >  LLAMA2</p> <p className='font-thin italic' >Meta</p> </div>
-                        <div className={`w-[20%] h-[80%] relative  border-e text-white flex flex-col justify-center items-center cursor-pointer bg-[${btnCount === 4 ? "#1a46c9" : "#1e52ee"}] hover:bg-[#1a46c9] model-box `} onClick={() => handleModelChoose(true, 4, "google")} ><p className='font-bold' >Gemma-7b</p> <p className='font-thin italic' >Google</p> </div>
+                        <div className={`w-[20%] h-[80%] relative  border-e text-white flex flex-col justify-center items-center cursor-pointer bg-[${btnCount === 4 ? "#1a46c9" : "#1e52ee"}] hover:bg-[#1a46c9] model-box `} onClick={() => handleModelChoose(true, 4, "gemma")} ><p className='font-bold' >Gemma-7b</p> <p className='font-thin italic' >Google</p> </div>
                         <div className={`w-[20%] h-[80%] relative  rounded-e-lg text-white flex flex-col justify-center items-center cursor-pointer bg-[${btnCount === 4 ? "#1a46c9" : "#1e52ee"}] hover:bg-[#1a46c9] model-box `} onClick={() => handleModelChoose(true, 4, "mistral")} ><p className='font-bold' >Mixtral-8x7B</p> <p className='font-thin italic' >Mistralai</p></div>
                     </div>
                 </div>
@@ -308,12 +312,15 @@ export const MainComponent: React.FC = () => {
                             <img src={`http://localhost:4000/getprofilePic/meta.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Llama 2</p>
 
                         </div>
-                        <div className='h-[20%] w-[100%] flex items-center justify-start cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 4, "google")} >
-                            <img src={`http://localhost:4000/getprofilePic/google.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemma-7b</p>
+                        <div className='h-[20%] w-[100%] flex items-center justify-start cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 4, "gemma")} >
+                            <img src={`http://localhost:4000/getprofilePic/gemma.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemma-7b</p>
 
                         </div>
                         <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 5, "mistral")} >
                             <img src={`http://localhost:4000/getprofilePic/mistral.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Mixtral-8x7B</p>
+                        </div>
+                        <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 5, "gemini")} >
+                            <img src={`http://localhost:4000/getprofilePic/gemini.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemini-Pro</p>
                         </div>
                     </div>
                 </> : <>
@@ -330,11 +337,14 @@ export const MainComponent: React.FC = () => {
 
                         </div>
                         <div className='h-[20%] w-[100%] flex items-center justify-start cursor-pointer hover:bg-white' >
-                            <img src={`http://localhost:4000/getprofilePic/google.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemma-7b</p>
+                            <img src={`http://localhost:4000/getprofilePic/gemma.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemma-7b</p>
 
                         </div>
                         <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white ' >
                             <img src={`http://localhost:4000/getprofilePic/mistral.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Mixtral-8x7B</p>
+                        </div>
+                        <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white ' >
+                            <img src={`http://localhost:4000/getprofilePic/gemini.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemini-Pro</p>
                         </div>
                     </div>
                 </>}

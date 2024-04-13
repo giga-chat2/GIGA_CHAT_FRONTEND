@@ -25,7 +25,7 @@ import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
 import StraightIcon from '@mui/icons-material/Straight';
 import { useRouter } from 'next/navigation'
-
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 
 export const PopUpCover: React.FC = () => {
@@ -337,7 +337,7 @@ function getCookieValue(cookieName: string) {
     return null;
 }
 
-const sock = io('http://localhost:5000', {
+const socket = io('http://localhost:5000', {
     auth: {
         token: getCookieValue('username'),
     }
@@ -385,12 +385,12 @@ export const MainComponent: React.FC = () => {
     const [messages, setMessages] = useState<object[]>([])
     const [currentUser, setCurrentUser] = useCookies(['username'])
     const [profilePicPath, setProfilePicPath] = useCookies(['profilePicPath'])
-    const [recievedMessage, setRecievedMessage] = useState<string>('')
+    const [recievedMessage, setRecievedMessage] = useCookies(['recievedMessage'])
     const [isChatWindowVisible, setIsChatWindowVisible] = useState<boolean | null>(null)
     const [currentUserName, setCurrentUserName] = useState()
     const [index, setIndex] = useState<number>(0)
     const [roomId, setRoomId] = useState<string>('')
-    const [roomID,setRoomID]=useCookies(['roomID'])
+    const [roomID, setRoomID] = useCookies(['roomID'])
     const [placeholderVal, setPlaceholderVal] = useState("Enter your message and hit 'Enter'")
     const [openAiChats, setOpenAiChats] = useState<object[]>([{ role: "system", content: "You are a helpful assistant , that responds on behalf of the user based on the past conversation . Just make a logical guess what could user might say next and just give that as an output . If the newest role is user then just provide the follow-up sentence that the user might say and if the newest role is assistant then just provide the response to it as an output" }])
     const [selectedOnlineUsers, setSelectedOnlineUsers] = useState<string[]>([])
@@ -399,7 +399,9 @@ export const MainComponent: React.FC = () => {
     const [aiSuggestions, setAiAuggestions] = useCookies(['aiSuggestions'])
     const [dispStatus, setDispStatus] = useCookies(['dispStatus'])
     const [mobileView, setMobileView] = useCookies(['mobileView'])
-    const [socket, setSocket] = useState<any>(sock)
+    const [currentSelectedUser, setCurrentSelectedUser] = useCookies(['currentSelectedUser'])
+    const [seenPendingMessages, setSeenPendingMessages] = useState<object>({})
+    const [lastestReceived, setLastestReceived] = useState<string>('')
 
     useEffect(() => {
         if (handleNewComingUser) {
@@ -411,9 +413,16 @@ export const MainComponent: React.FC = () => {
         if (socket) {
             if (!socket.hasListeners('receive_Message')) {
                 socket.on('receive_Message', (data) => {
-                    // fetchInitialData()
-                    if (data.email !== emailCookie.email) {
-                        setRecievedMessage(data.message)
+                    console.log(data, selectedUser, getCookieValue('currentSelectedUser'))
+                    if (data.receiver === currentUser?.username) {
+                        console.log('receive_Message', 1)
+                        if (data.sender === getCookieValue('currentSelectedUser')) {
+                            setRecievedMessage('recievedMessage', data.message, { path: '/' })
+                        } else {
+                            console.log(seenPendingMessages, selectedUser)
+                            setLastestReceived(data.sender)
+                            setSeenPendingMessages((prevSeenPendingMessages) => { return { ...prevSeenPendingMessages, [data.sender]: prevSeenPendingMessages[data.sender] ? prevSeenPendingMessages[data.sender] + 1 : 1 } })
+                        }
                     }
                 })
             }
@@ -432,7 +441,9 @@ export const MainComponent: React.FC = () => {
             })
 
             socket.on('receive_voice_message', (data) => {
-                setVoiceNote(data.audioURL)
+                if (data.receiver === currentUser?.username && data.sender === getCookieValue('currentSelectedUser')) {
+                    setVoiceNote(data.audioURL)
+                }
             })
 
             socket.on("check_RoomId", (data) => {
@@ -466,6 +477,41 @@ export const MainComponent: React.FC = () => {
             socket.off('check_RoomId');
         }
     }, [socket]);
+
+    const addPending = async (recipient: string) => {
+        try {
+            const res = await axios.post('http://localhost:4000/addPendingMessages', { recipient: recipient, currentUser: currentUser?.username })
+
+        } catch (e) { console.log(e) }
+    }
+
+    useEffect(() => {
+        if (lastestReceived !== '' && selectedUser) {
+            const userIndex = selectedUser.findIndex((user) => user?.username === lastestReceived)
+            if (userIndex !== -1) {
+                const userToMove = selectedUser?.splice(userIndex, 1)[0];
+                selectedUser.unshift(userToMove);
+                setSelectedUser([...selectedUser]);
+                handleUserClick(null, undefined, getCookieValue('currentSelectedUser'))
+                addPending(lastestReceived);
+            }
+        }
+    }, [lastestReceived])
+
+    const [animationTarget, setAnimationTarget] = useState(null);
+
+    useEffect(() => {
+        // Trigger animation when animationTarget changes
+        if (animationTarget) {
+            setTimeout(() => {
+                setAnimationTarget(null); // Reset animationTarget after the animation completes
+            }, 500);
+        }
+    }, [animationTarget]);
+
+
+
+
 
     useEffect(() => {
         setMessages((prevMessages) => [{ audioURL: voiceNote, isSender: false }, ...prevMessages])
@@ -518,19 +564,20 @@ export const MainComponent: React.FC = () => {
     }
     const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
     useEffect(() => {
+        console.log("got called", recievedMessage.recievedMessage)
         if (firstTimeLoaded) {
-            handleAiSuggestion("assistant", "Provide response for this : " + recievedMessage)
+            handleAiSuggestion("assistant", "Provide response in maximum 10 words for this : " + recievedMessage.recievedMessage)
         } else {
             setFirstTimeLoaded(true)
         }
-        if (recievedMessage !== '' && messages) {
-            setMessages((prevMessages) => [{ message: recievedMessage, isSender: false }, ...prevMessages])
-            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
+        if (recievedMessage.recievedMessage !== '' && messages) {
+            setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
         } else {
-            setMessages([{ message: recievedMessage, isSender: false }])
-            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage }])
+            setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
         }
-    }, [recievedMessage]);
+    }, [recievedMessage.recievedMessage]);
 
     const fetchInitialData = async () => {
         try {
@@ -550,8 +597,14 @@ export const MainComponent: React.FC = () => {
                 setResults(finalFilteredData);
                 const array = filteredData.map((item: any) => item.username)
                 setSelectedUser(data.selectedUsers.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime)));
+                const updatedSeenPendingMessages = {};
+                data.selectedUsers.forEach(user => {
+                    if (user.pending && user.pending > 0) {
+                        updatedSeenPendingMessages[user.username] = user.pending;
+                    }
+                });
+                setSeenPendingMessages(updatedSeenPendingMessages);
                 let arr = data.selectedUsers.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime))
-                handleUserClick(0, arr[0]?.username)
                 setSelectedOnlineUsers(data.onlineUsers)
                 setProfilePicPath('profilePicPath', data?.currentUser?.profilePic, { path: '/' })
                 setCurrentUser('username', data.currentUser?.username, { path: '/' })
@@ -559,6 +612,7 @@ export const MainComponent: React.FC = () => {
                     socket.emit('online', currentUser?.username)
                     addToOnlineUsers(dispStatus.dispStatus, currentUser?.username)
                 }
+                handleUserClick(data.currentUser?.username, 0, arr[0]?.username)
             })
         } catch (e) {
             console.log(e)
@@ -645,36 +699,40 @@ export const MainComponent: React.FC = () => {
 
 
     }
-    const handleUserClick = async (index: number, initialSelectedUserName: any = null) => {
+    const handleUserClick = async (currentUserKaNaam: string | null = null, index: any = null, initialSelectedUserName: any = null) => {
+
+        setCurrentSelectedUser('currentSelectedUser', initialSelectedUserName, { path: '/' })
+        setSeenPendingMessages((prevSeenPendingMessages) => { return { ...prevSeenPendingMessages, [initialSelectedUserName]: 0 } })
         setHandleSelectedUserClicked(true)
-        setIndex(index)
-        setMessages([])
-        setIsChatWindowVisible(true);
-        setUserClicked(index);
-        if(roomID.roomID && roomID.roomID != '' ){
-            console.log("roomID",roomID.roomID)
-            if(socket){
-                socket.emit('leave_Room', {room_Id: roomID.roomID, username: currentUser?.username})
+        let tempIdx
+        if (index !== null) {
+            setIndex(index)
+            setUserClicked(index);
+        } else {
+            if (selectedUser) {
+                setAnimationTarget(initialSelectedUserName);
+                tempIdx = selectedUser.findIndex((user) => user?.username === initialSelectedUserName)
+                setIndex(tempIdx)
+                setUserClicked(tempIdx)
             }
         }
-        if(selectedUser){
-            setRoomId(selectedUser[index]?.roomId)
-            setRoomID('roomID',selectedUser[index]?.roomId,{path:'/'})
+        setMessages([])
+        setIsChatWindowVisible(true);
+        if (selectedUser) {
+            setRoomId(index ? selectedUser[index]?.roomId : selectedUser[tempIdx]?.roomId)
+            setRoomID('roomID', index ? selectedUser[index]?.roomId : selectedUser[tempIdx]?.roomId, { path: '/' })
         }
-        const res = await axios.post('http://localhost:4000/getChats', {
-            currentUser: currentUser?.username,
-            selectedUser: initialSelectedUserName ? initialSelectedUserName : selectedUser[index]?.username,
-        })
-        let response = res.data
-        setMessages(response.chats)
-        setRoomId(response?.roomId)
-        if (socket) {
-            socket.emit("join_Room",{username :currentUser.username ,room_Id: response?.roomId});
-            // socket.emit("send_RoomId", {
-            //     roomId: response?.roomId,
-            //     sender: currentUser,
-            //     receiver: selectedUser,
-            // });
+        try {
+            console.log(currentUser?.username, initialSelectedUserName)
+            const res = await axios.post('http://localhost:4000/getChats', {
+                currentUser: currentUserKaNaam ? currentUserKaNaam : currentUser?.username,
+                selectedUser: initialSelectedUserName,
+            })
+            let response = res.data
+            setMessages(response.chats)
+            setRoomId(response?.roomId)
+        } catch (e) {
+            console.log(e)
         }
 
     }
@@ -683,7 +741,7 @@ export const MainComponent: React.FC = () => {
         e.preventDefault()
         setTypedMessage('')
         setPlaceholderVal('')
-        handleAiSuggestion("user", "Provide follow up :" + typedMessage)
+        handleAiSuggestion("user", "Provide folow up in maximum 10 words for this :" + typedMessage)
 
         const res = await fetch('http://localhost:4000/addChat', {
             method: 'POST',
@@ -706,7 +764,7 @@ export const MainComponent: React.FC = () => {
 
 
         if (socket) {
-            socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email });
+            socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email, sender: currentUser.username, receiver: selectedUser[index]?.username });
         }
     }
 
@@ -716,8 +774,14 @@ export const MainComponent: React.FC = () => {
 
     const handleContextMenu = (e: React.MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => {
         e.preventDefault()
-        const { pageX, pageY } = e
-        setContextMenu({ show: true, x: pageX, y: pageY })
+        if (contextMenu.show) {
+            setContextMenu({ show: false, x: 0, y: 0 })
+
+        } else {
+            const { pageX, pageY } = e
+            setContextMenu({ show: true, x: pageX - 150, y: pageY + 30 })
+        }
+
     }
 
     const handleContextMenuClose = () => {
@@ -765,7 +829,7 @@ export const MainComponent: React.FC = () => {
                         icon: "success",
                         title: "User Archieved Successfully!"
                     });
-                    handleUserClick(0)
+                    handleUserClick(null, 0, selectedUser[0]?.username)
                 }
             })
         } catch (e) {
@@ -862,7 +926,8 @@ export const MainComponent: React.FC = () => {
                 const audioURL = data.audioURL;
                 setMessages((prevMessages) => [{ audioURL: audioURL, isSender: true }, ...prevMessages])
                 if (socket) {
-                    socket.emit('voice_message', { audioURL: audioURL, roomId, sender: currentUser.username });
+                    // socket.emit('voice_message', { audioURL: audioURL, roomId, sender: currentUser.username });
+                    socket.emit('voice_message', { audioURL: audioURL, sender: currentUser.username, receiver: selectedUser[index]?.username })
                 }
 
             } catch (e) {
@@ -880,11 +945,11 @@ export const MainComponent: React.FC = () => {
     }
 
 
-    const router = useRouter()  
+    const router = useRouter()
 
-    const redirectToUserPageMobile = async(index) => {
-        if(socket){
-            socket.emit('join_Room',{room_Id: selectedUser[index].roomId,username:currentUser.username})
+    const redirectToUserPageMobile = async (index) => {
+        if (socket) {
+            socket.emit('join_Room', { room_Id: selectedUser[index].roomId, username: currentUser.username })
         }
         router.push(`allchats/${selectedUser[index].roomId}/${selectedUser[index].username}`)
 
@@ -1000,7 +1065,7 @@ export const MainComponent: React.FC = () => {
                                     </>}
                                     <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
                                         {selectedUser && selectedUser.length > 0 ? selectedUser?.map((user, idx) => (
-                                            <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => handleUserClick(idx)} >
+                                            <div className={`w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer user-list-item  mb-3 rounded-sm ${animationTarget === user.username ? 'move-up-animation' : ''} `} onContextMenu={handleContextMenu} onClick={() => handleUserClick(null, idx, user?.username)} >
                                                 <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
                                                     <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                         <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
@@ -1017,7 +1082,11 @@ export const MainComponent: React.FC = () => {
                                                         <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={idx}>{user?.name}</p>
                                                     </div>
                                                     <div className='relative w-[20%] h-[100%] flex justify-center items-center text-white rounded-e-sm '>
-                                                        <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                                        {seenPendingMessages[user?.username] && seenPendingMessages[user?.username] > 0 ? <>
+                                                            <div className='w-[50%] h-[100%]  flex justify-center items-center ' ><p className='w-[20px] h-[20px] rounded-full text-[#3d3c3c] bg-white font-semibold  flex justify-center items-center ' >{seenPendingMessages[user?.username]}</p></div>
+                                                        </> : <>
+                                                            <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                                        </>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1034,8 +1103,39 @@ export const MainComponent: React.FC = () => {
                         {selectedUser && selectedUser.length > 0 ?
                             <>
                                 <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
-                                    <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
-                                        <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
+                                    <div className='flex flex-col justify-center items-center w-[100%] h-[85%] relative'>
+                                        <div className='flex justify-center items-center w-[100%] h-[15%]  ' >
+                                            <div className=' flex w-[90%] h-[80%] border border-[#1e232c] rounded ' >
+                                                <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
+                                                    <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
+                                                        {selectedUser[index]?.profilePic ? <>
+                                                            <img
+                                                                src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                                                                alt="profile"
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                            />
+                                                        </> : <>
+                                                            <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />
+                                                        </>}
+                                                    </div>
+                                                </div>
+                                                <div className='w-[15%] h-[100%]  flex flex-col justify-center items-center ' >
+                                                    <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                                        <p className='w-[100%] h-[100%] flex justify-start items-center text-center text-white font-bold text-xl mt-3 ' >{selectedUser[index]?.username}</p>
+                                                    </div>
+                                                    <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                                        <p className='w-[100%] h-[100%] flex justify-start items-center text-center  text-white font-thin text-sm italic ' >
+                                                            {selectedOnlineUsers.includes(selectedUser[index]?.username) ? 'Online' : 'Offline'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className='w-[10%] flex justify-center items-center h-[100%]  ml-auto ' >
+                                                    <MoreVertIcon sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                        <div className='relative flex flex-col-reverse w-[90%] h-[85%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
 
                                             {messages && messages.length > 0 && messages.map((msg, idx) => (
                                                 <div key={idx} className={`w-[450px] mb-20 border-none h-[150px] flex mt-2 ${msg.isSender ? 'ml-auto sender' : ''}`}>
@@ -1049,7 +1149,7 @@ export const MainComponent: React.FC = () => {
                                                                     </audio>
                                                                 ) : (
                                                                     <>
-                                                                        {msg.message.includes('http://localhost:3000/pages/room/') ? (
+                                                                        {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
                                                                             <>
                                                                                 {msg.message.split('http://localhost:3000/pages/room/')[0]}
                                                                                 <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
@@ -1095,7 +1195,7 @@ export const MainComponent: React.FC = () => {
                                                                             </audio>
                                                                         ) : (
                                                                             <>
-                                                                                {msg.message.includes('http://localhost:3000/pages/room/') ? (
+                                                                                {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
                                                                                     <>
                                                                                         {msg.message.split('http://localhost:3000/pages/room/')[0]}
                                                                                         <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
@@ -1186,10 +1286,10 @@ export const MainComponent: React.FC = () => {
                                     </div>
                                 ))}
                             </div>
-                        </> : <></> }
+                        </> : <></>}
                         <div className='flex flex-col items-center w-[100%] relative z-10 mt-1 h-[95%] overflow-y-scroll' >
                             {selectedUser && selectedUser.length > 0 ? selectedUser?.map((user, idx) => (
-                                <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={()=>redirectToUserPageMobile(idx)} >
+                                <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => redirectToUserPageMobile(idx)} >
                                     <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
                                         <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                             <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
@@ -1217,7 +1317,7 @@ export const MainComponent: React.FC = () => {
                             </>}
                         </div>
 
-                        
+
                     </div>
 
                 </div>

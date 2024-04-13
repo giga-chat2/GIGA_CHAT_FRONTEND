@@ -15,6 +15,11 @@ import axios from 'axios'
 import Swal from 'sweetalert2'
 import ArchiveIcon from '@mui/icons-material/Archive';
 import { useRouter } from 'next/navigation';
+import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
+import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
+import OpenAI from "openai";
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+
 
 type User = {
     username: {
@@ -93,7 +98,21 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
     }, [ref, handler]);
 };
 
-const socket = io('http://localhost:5000')
+const socket = io('http://localhost:5000', {
+    auth: {
+        token: getCookieValue('username'),
+    }
+})
+function getCookieValue(cookieName: string) {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(cookieName + '=')) {
+            return cookie.substring(cookieName.length + 1);
+        }
+    }
+    return null;
+}
 
 export const MainComponent: React.FC = () => {
     const [results, setResults] = useState<object>()
@@ -107,24 +126,40 @@ export const MainComponent: React.FC = () => {
     const [messages, setMessages] = useState<object[]>([])
     const [currentUser, setCurrentUser] = useCookies(['username'])
     const [profilePicPath, setProfilePicPath] = useCookies(['profilePicPath'])
-    const [recievedMessage, setRecievedMessage] = useState<string>('')
+    const [recievedMessage, setRecievedMessage] = useCookies(['recievedMessage'])
     const [isChatWindowVisible, setIsChatWindowVisible] = useState<boolean | null>(null)
     const [index, setIndex] = useState<number>(0)
     const [roomId, setRoomId] = useState<string>('')
     const [displayNoUsersFoundImg, setDisplayNoUsersFoundImg] = useState<boolean>(false)
-
-    const [openAiChats, setOpenAiChats] = useState<object[]>([{ role: "system", content: "You are a helpful assistant , that tells the receiver what should be his next response based on the past conversations  " }, { role: "user", content: "Hello, how are you?" }])
+    const [placeholderVal, setPlaceholderVal] = useState("Enter your message and hit 'Enter'")
+    const [openAiChats, setOpenAiChats] = useState<object[]>([{ role: "system", content: "You are a helpful assistant , that tells the receiver what should be his next response based on the past conversations , provide output under maximum 10 words " }, { role: "user", content: "Hello, how are you?" }])
+    const [voiceNote, setVoiceNote] = useState<any>()
+    const [currentSelectedUser, setCurrentSelectedUser] = useCookies(['currentSelectedUser'])
+    const [aiSuggestions, setAiAuggestions] = useCookies(['aiSuggestions'])
 
     useEffect(() => {
         if (socket) {
             if (!socket.hasListeners('receive_Message')) {
                 socket.on('receive_Message', (data) => {
-                    console.log(data, "recievedMessage")
-                    if (data.email !== emailCookie.email) {
-                        setRecievedMessage(data.message)
+                    console.log(data, selectedUser, getCookieValue('currentSelectedUser'))
+                    if (data.receiver === currentUser?.username) {
+                        console.log('receive_Message', 1)
+                        if (data.sender === getCookieValue('currentSelectedUser')) {
+                            setRecievedMessage('recievedMessage', data.message, { path: '/' })
+                        }
                     }
                 })
             }
+            socket.on("onlineUsers", (data) => {
+                setSelectedOnlineUsers((prevOnlineUsers) => [...prevOnlineUsers, data])
+            })
+            socket.on("remove_online", (data) => {
+                setSelectedOnlineUsers((prevOnlineUsers) => prevOnlineUsers.filter((user) => user !== data))
+            })
+            socket.on('newOnlineUsers', (data) => {
+                const { onlineUsers } = data;
+                setSelectedOnlineUsers(onlineUsers)
+            })
             socket.on("check_RoomId", (data) => {
                 const { room_Id, sender, receiver } = data;
                 if (roomId !== room_Id) {
@@ -143,17 +178,64 @@ export const MainComponent: React.FC = () => {
 
                 }
             })
+            socket.on('receive_voice_message', (data) => {
+                if (data.receiver === currentUser?.username && data.sender === getCookieValue('currentSelectedUser')) {
+                    setVoiceNote(data.audioURL)
+                }
+            })
         }
 
         // return () => { socket.off('check_RoomId'); }
     }, [socket]);
 
     useEffect(() => {
-        if (recievedMessage !== '') {
-            setMessages((prevMessages) => [{ message: recievedMessage, isSender: false }, ...prevMessages])
-            setOpenAiChats((prevChats) => [{ role: "sender", content: recievedMessage }, ...prevChats])
+        setMessages((prevMessages) => [{ audioURL: voiceNote, isSender: false }, ...prevMessages])
+    }, [voiceNote])
+
+    var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
+
+    const handleAiSuggestion = async (role: string, msg: string) => {
+        if (aiSuggestions.aiSuggestions) {
+            try {
+
+                const completion = await openai.chat.completions.create({
+                    messages: [...openAiChats, { role: role, content: msg }],
+                    model: "gpt-3.5-turbo",
+                });
+                setPlaceholderVal(completion?.choices[0]?.message?.content)
+            }
+            catch (e) {
+                try {
+                    openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
+                    const completion = await openai.chat.completions.create({
+                        messages: [...openAiChats, { role: role, content: msg }],
+                        model: "gpt-3.5-turbo",
+                    });
+                    setPlaceholderVal(completion.choices[0].message.content)
+                } catch (e) {
+                    console.log(e)
+                }
+            }
+        } else {
+            setPlaceholderVal('Enter your message and hit "Enter"')
         }
-    }, [recievedMessage]);
+    }
+    const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
+    useEffect(() => {
+        console.log("got called", recievedMessage.recievedMessage)
+        if (firstTimeLoaded) {
+            handleAiSuggestion("assistant", "Provide response in maximum 10 words for this : " + recievedMessage.recievedMessage)
+        } else {
+            setFirstTimeLoaded(true)
+        }
+        if (recievedMessage.recievedMessage !== '' && messages) {
+            setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
+        } else {
+            setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
+        }
+    }, [recievedMessage.recievedMessage]);
 
     const fetchInitialData = async () => {
         try {
@@ -172,7 +254,9 @@ export const MainComponent: React.FC = () => {
                 // setProfilePicPath('profilePicPath', data?.currentUser?.profilePic, { path: '/' })
                 // setCurrentUser('username', data.currentUser?.username, { path: '/' })
                 setSelectedUser(data.archivedUsers)
+                handleUserClick(0, data.archivedUsers[0]?.username, data.archivedUsers[0]?.roomId)
                 console.log(data.archivedUsers)
+                setSelectedOnlineUsers(data.onlineUsers)
             })
         } catch (e) {
             console.log(e)
@@ -245,15 +329,17 @@ export const MainComponent: React.FC = () => {
         }
     }
 
-    const handleUserClick = async (index: number) => {
+    const handleUserClick = async (index: number, initialSelectedUserName: any = null, room_ka_ID: any = null) => {
+        setCurrentSelectedUser('currentSelectedUser', initialSelectedUserName, { path: '/' })
         setIndex(index)
         setMessages([])
         setUserClicked(index);
-        setRoomId(selectedUser[index]?.roomId)
+        setRoomId(room_ka_ID)
+
         try {
             const res = await axios.post('http://localhost:4000/getChats', {
                 currentUser: currentUser?.username,
-                selectedUser: selectedUser[index]?.username,
+                selectedUser: initialSelectedUserName,
             }).then((res) => {
                 if (res?.status === 200) {
                     setMessages(res.data.chats)
@@ -262,16 +348,16 @@ export const MainComponent: React.FC = () => {
         } catch (e) {
             console.log(e)
         }
-        if (socket) {
-            // if (!isChatWindowVisible) {
-                socket.emit("join_Room", selectedUser[index]?.roomId);
-                socket.emit("send_RoomId", {
-                    roomId: selectedUser[index]?.roomId,
-                    sender: currentUser,
-                    receiver: selectedUser,
-                });
-            // }
-        }
+        // if (socket) {
+        //     // if (!isChatWindowVisible) {
+        //     socket.emit("join_Room", selectedUser[index]?.roomId);
+        //     socket.emit("send_RoomId", {
+        //         roomId: selectedUser[index]?.roomId,
+        //         sender: currentUser,
+        //         receiver: selectedUser,
+        //     });
+        //     // }
+        // }
 
     }
 
@@ -288,12 +374,13 @@ export const MainComponent: React.FC = () => {
                 console.log('Message sent successfully.')
             }
         })
+        handleAiSuggestion("user", "Provide output in maximum 10 words for the follow up :" + typedMessage)
         setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
         setOpenAiChats((prevChats) => [{ role: "sender", content: typedMessage }, ...prevChats])
         console.log("before openai", openAiChats)
         if (socket) {
             setTypedMessage('')
-            socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email });
+            socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email, sender: currentUser.username, receiver: selectedUser[index]?.username });
 
         }
     }
@@ -305,7 +392,7 @@ export const MainComponent: React.FC = () => {
     const handleContextMenu = (e: React.MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => {
         e.preventDefault()
         const { pageX, pageY } = e
-        setContextMenu({ show: true, x: pageX, y: pageY })
+        setContextMenu({ show: true, x: pageX - 150, y: pageY + 30 })
     }
 
     const handleContextMenuClose = () => {
@@ -336,8 +423,9 @@ export const MainComponent: React.FC = () => {
                 body: JSON.stringify({ username: currentUser?.username, selectedUser: selectedUser[index]?.username })
             }).then((res) => {
                 if (res?.status === 200) {
-                    setIsChatWindowVisible(false);
+                    // setIsChatWindowVisible(false);
                     const updatedSelectedUsers = selectedUser.filter((user, idx) => idx !== index)
+                    handleUserClick(0, updatedSelectedUsers[0]?.username, updatedSelectedUsers[0]?.roomId)
                     const Toast = Swal.mixin({
                         toast: true,
                         position: "top-end",
@@ -353,9 +441,9 @@ export const MainComponent: React.FC = () => {
                         icon: "success",
                         title: "User UnArchieved Successfully!"
                     });
-                    if(updatedSelectedUsers.length === 0){
+                    if (updatedSelectedUsers.length === 0) {
                         push('/pages/allchats')
-                    }else{
+                    } else {
                         setSelectedUser(updatedSelectedUsers)
                     }
                 }
@@ -401,6 +489,68 @@ export const MainComponent: React.FC = () => {
             console.log(e)
         }
     }
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.keyCode === 9) {
+            e.preventDefault();
+            const inputField = e.currentTarget;
+            setTypedMessage(inputField.placeholder);
+        }
+    };
+
+
+    const [is_recording, setIsRecording] = useState(false)
+    const audioChunks = React.useRef<any[]>([])
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null)
+    async function startRec() {
+        setIsRecording(true)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mediaRecorder = new MediaRecorder(stream)
+        mediaRecorder.start()
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                audioChunks.current.push(e.data)
+            }
+        }
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks.current, { type: 'audio/ogg' })
+            const audioFile = new File([audioBlob], 'audio.ogg', { type: 'audio/ogg' });
+
+            const formData = new FormData();
+            formData.append('audio', audioFile);
+            formData.append('roomId', roomId);
+            formData.append('sender', currentUser.username);
+            // formData.append('audioURL',audioURL)
+            if (selectedUser) {
+                formData.append('receiver', selectedUser[index]?.username);
+            }
+            try {
+                const response = await axios.post('http://localhost:4000/uploadAudio', formData)
+                const data = response.data;
+                const audioURL = data.audioURL;
+                setMessages((prevMessages) => [{ audioURL: audioURL, isSender: true }, ...prevMessages])
+                if (socket) {
+                    // socket.emit('voice_message', { audioURL: audioURL, roomId, sender: currentUser.username });
+                    socket.emit('voice_message', { audioURL: audioURL, sender: currentUser.username, receiver: selectedUser[index]?.username })
+                }
+
+            } catch (e) {
+                console.log(e)
+            }
+        }
+        mediaRecorderRef.current = mediaRecorder
+    }
+    function stopRec() {
+        setIsRecording(false)
+        audioChunks.current = []
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop()
+        }
+    }
+
+    const [selectedOnlineUsers, setSelectedOnlineUsers] = useState<string[]>([])
+
+
 
 
 
@@ -499,7 +649,7 @@ export const MainComponent: React.FC = () => {
                             </>}
                             <div className='flex flex-col items-center relative z-10  h-[95%] overflow-y-scroll' >
                                 {selectedUser && selectedUser?.map((user, index) => (
-                                    <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => handleUserClick(index)} >
+                                    <div className='w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer mb-3 rounded-sm' onContextMenu={handleContextMenu} onClick={() => handleUserClick(index, user?.username, user?.roomId)} >
                                         <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === index ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
                                             <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                 <div className='relative w-[65px] h-[65px] border-none overflow-hidden rounded-full flex flex-center items-center justify-center' >
@@ -511,9 +661,16 @@ export const MainComponent: React.FC = () => {
 
                                                 </div>
                                             </div>
-                                            <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
+                                            <div className='relative w-[50%] h-[100%] border-none text-white rounded-e-sm '>
                                                 <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{user.username}</p>
                                                 <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{user.name}</p>
+                                            </div>
+                                            <div className='relative w-[20%] h-[100%] flex justify-center items-center text-white rounded-e-sm '>
+                                                {/* {seenPendingMessages[user?.username] && seenPendingMessages[user?.username] > 0 ? <>
+                                                    <div className='w-[50%] h-[100%]  flex justify-center items-center ' ><p className='w-[20px] h-[20px] rounded-full text-[#3d3c3c] bg-white font-semibold  flex justify-center items-center ' >{seenPendingMessages[user?.username]}</p></div>
+                                                </> : <> */}
+                                                    <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                                {/* </>} */}
                                             </div>
                                         </div>
                                     </div>
@@ -524,23 +681,58 @@ export const MainComponent: React.FC = () => {
                     </div>
                 </div>
                 <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
-                    <div className='flex justify-center items-center w-[100%] h-[85%] relative '>
-                        <div className='relative flex flex-col-reverse w-[90%] h-[90%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
+                    <div className='flex flex-col justify-center items-center w-[100%] h-[85%] relative '>
+                        <div className='flex justify-center items-center w-[100%] h-[15%]  ' >
+                            <div className=' flex w-[90%] h-[80%] border border-[#1e232c] rounded ' >
+                                <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
+                                    <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
+                                        <img
+                                            src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                                            alt="profile"
+                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className='w-[15%] h-[100%]  flex flex-col justify-center items-center ' >
+                                    <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                        <p className='w-[100%] h-[100%] flex justify-start items-center text-center text-white font-bold text-xl mt-3 ' >{selectedUser[index]?.username}</p>
+                                    </div>
+                                    <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                        <p className='w-[100%] h-[100%] flex justify-start items-center text-center  text-white font-thin text-sm italic ' >
+                                            {selectedOnlineUsers.includes(selectedUser[index]?.username) ? 'Online' : 'Offline'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className='w-[10%] flex justify-center items-center h-[100%]  ml-auto ' >
+                                    <MoreVertIcon sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
+                                </div>
+
+                            </div>
+                        </div>
+                        <div className='relative flex flex-col-reverse w-[90%] h-[85%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
 
                             {messages && messages.map((msg, idx) => (
-                                <div className={`w-[350px] border-none h-[150px] flex border mt-2 ${msg.isSender ? ' ml-auto sender' : ''} `} >
+                                <div className={`w-[450px] mb-20 border-none h-[150px] flex border mt-2 ${msg.isSender ? ' ml-auto sender' : ''} `} >
                                     {msg?.isSender ? <>
                                         <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0  ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex flex-col  `}>
-                                            {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
-                                                <>
-                                                    {msg.message.split('http://localhost:3000/pages/room/')[0]}
-                                                    <a href={`http://localhost:3000/pages/room/${msg?.message?.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline' >
-                                                        click here
-                                                    </a>
-                                                </>
+                                            {msg.audioURL ? (
+                                                <audio controls src={msg.audioURL} id={idx} >
+                                                    <source src={msg.audioURL} />
+                                                    Your browser does not support the audio element.
+                                                </audio>
                                             ) : (
-                                                <>{msg?.message}</>
-                                            )}                                        </div>
+                                                <>
+                                                    {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                        <>
+                                                            {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                            <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                        </>
+                                                    ) : (
+                                                        <>{msg.message}</>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                         <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex   justify-end ' >
                                             {profilePicPath?.profilePicPath ? <>
                                                 <img
@@ -564,15 +756,22 @@ export const MainComponent: React.FC = () => {
                                             }
                                         </div>
                                         <div className={`w-[fit-content] h-[fit-content] mt-auto font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>
-                                            {msg.message.includes('http://localhost:3000/pages/room/') ? (
-                                                <>
-                                                    {msg.message.split('http://localhost:3000/pages/room/')[0]}
-                                                    <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline' >
-                                                        click here
-                                                    </a>
-                                                </>
+                                            {msg.audioURL ? (
+                                                <audio src={msg.audioURL} controls>
+                                                    <source src={msg.audioURL} type="audio/wav" />
+                                                    Your browser does not support the audio element.
+                                                </audio>
                                             ) : (
-                                                <>{msg.message}</>
+                                                <>
+                                                    {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                        <>
+                                                            {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                            <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                        </>
+                                                    ) : (
+                                                        <>{msg.message}</>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </>}
@@ -583,12 +782,23 @@ export const MainComponent: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className='flex justify-center items-center w-[100%] h-[15%] relative '>
-                        <div className='flex flex-center justify-center items-center relative w-[90%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
+                    <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
+
+                        <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
                             <form onSubmit={onChatSubmit} className='submit-chat-form' >
-                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder="Enter your message and hit 'Enter'" onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
+                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
                                 <input type="submit" className='hidden w-[0%] h-[0%]' />
                             </form>
+                        </div>
+                        <div className='w-[10%] h-[100%] flex justify-center items-center' >
+                            <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
+                                {/* <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRecording} onMouseUp={stopRecordingAndSend}>
+                                                {isMediaRecorderReady ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                            </div> */}
+                                <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
+                                    {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
