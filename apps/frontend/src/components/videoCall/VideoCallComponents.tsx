@@ -12,12 +12,26 @@ import axios from 'axios';
 import VideoChatIcon from '@mui/icons-material/VideoChat';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
+import { useSession } from 'next-auth/react';
 
 export const VideoCallMainComponent: React.FC = () => {
     const [currentUser, setCurrentUser] = useCookies(['username' as string])
     const [emailCookie, setEmailCookie] = useCookies(['email' as string])
     const [selectedUser, setSelectedUser] = useState<object[]>([])
     const [options, setOptions] = useState([])
+
+    const session = useSession()
+
+    useEffect(() => {
+        if (session?.status === 'authenticated') {
+            setEmailCookie('email', session?.data?.user?.email, { path: '/' })
+        }
+        else if(session?.status === 'unauthenticated'){
+            window.location.href = '/pages/auth'
+        }
+    },[])
+
+
     const socket = io('http://localhost:5000')
     const [meetings, setMeetings] = useState<object[]>([])
     const fetchMeetings = async () => {

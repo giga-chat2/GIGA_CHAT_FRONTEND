@@ -15,6 +15,8 @@ import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 type Event = MouseEvent | TouchEvent;
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useSession } from 'next-auth/react';
+
 
 export const useClickOutside = <T extends HTMLElement = HTMLElement>(
     ref: RefObject<T>,
@@ -50,6 +52,19 @@ export const MainComponent: React.FC = () => {
     const [currentUser, setCurrentUser] = useCookies(['username'])
     const [userClicked, setUserClicked] = useState<number | undefined>()
     const [chatHistory, setChatHistory] = useState<object[]>([{}])
+    const [emailCookie, setEmailCookie] = useCookies(['email' as string])
+
+    const session = useSession()
+
+    useEffect(() => {
+        if (session?.status === 'authenticated') {
+            setEmailCookie('email', session?.data?.user?.email, { path: '/' })
+        }
+        else if(session?.status === 'unauthenticated'){
+            window.location.href = '/pages/auth'
+        }
+    },[])
+
 
     const fetchInitialData = async () => {
         try {

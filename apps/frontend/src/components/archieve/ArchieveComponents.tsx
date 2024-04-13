@@ -19,6 +19,7 @@ import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import OpenAI from "openai";
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { useSession } from 'next-auth/react';
 
 
 type User = {
@@ -136,6 +137,18 @@ export const MainComponent: React.FC = () => {
     const [voiceNote, setVoiceNote] = useState<any>()
     const [currentSelectedUser, setCurrentSelectedUser] = useCookies(['currentSelectedUser'])
     const [aiSuggestions, setAiAuggestions] = useCookies(['aiSuggestions'])
+
+    const session = useSession()
+
+    useEffect(() => {
+        if (session?.status === 'authenticated') {
+            setEmailCookie('email', session?.data?.user?.email, { path: '/' })
+        }
+        else if(session?.status === 'unauthenticated'){
+            window.location.href = '/pages/auth'
+        }
+    },[])
+
 
     useEffect(() => {
         if (socket) {

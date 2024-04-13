@@ -29,6 +29,7 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import AddReactionIcon from '@mui/icons-material/AddReaction';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { useSession } from 'next-auth/react';
 
 
 type Event = MouseEvent | TouchEvent;
@@ -104,6 +105,17 @@ export const MainComponent: React.FC = () => {
     // const [groupRoomIdCookie, setGroupRoomIdCookie] = useCookies(['groupRoomId'])
     const [roomID, setRoomID] = useCookies(['roomID'])
     const [currentGroupName, setCurrentGroupName] = useCookies(['currentGroupName'])
+    const session = useSession()
+
+    useEffect(() => {
+        if (session?.status === 'authenticated') {
+            setEmailCookie('email', session?.data?.user?.email, { path: '/' })
+        }
+        else if(session?.status === 'unauthenticated'){
+            window.location.href = '/pages/auth'
+        }
+    },[])
+
 
 
     useEffect(() => {

@@ -37,9 +37,15 @@ export const PopUpCover: React.FC = () => {
     useEffect(() => {
         setVisiblePopUp(cookies.isPopUpVisible)
     }, [cookies.isPopUpVisible])
+
+
     useEffect(() => {
+        console.log(session?.status)
         if (session?.status === 'authenticated') {
             setEmailCookie('email', session?.data?.user?.email, { path: '/' })
+        }
+        else if(session?.status === 'unauthenticated'){
+            window.location.href = '/pages/auth'
         }
     })
     return (
