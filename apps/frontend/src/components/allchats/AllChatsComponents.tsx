@@ -75,53 +75,58 @@ export const InitialPopUp: React.FC = () => {
 
     let inputs = null
     let toggle_btn = null
-    let main = null
-    let bullets = null
-    let images = null
+    let main: any = null
+    let bullets: any = null
+    let images: any = null
 
     useEffect(() => {
-        inputs = document.querySelectorAll(".input-field");
-        toggle_btn = document.querySelectorAll(".toggle");
-        main = document.querySelector("main");
-        bullets = document.querySelectorAll(".bullets span");
-        images = document.querySelectorAll(".image");
+        if (process.browser) {
+            inputs = document.querySelectorAll(".input-field");
+            toggle_btn = document.querySelectorAll(".toggle");
+            main = document.querySelector("main");
+            bullets = document.querySelectorAll(".bullets span");
+            images = document.querySelectorAll(".image");
 
-        inputs.forEach((inp) => {
-            const inputElement = inp as HTMLInputElement;
-            inputElement.addEventListener("focus", () => {
-                inputElement.classList.add("active");
-            });
-            inputElement.addEventListener("blur", () => {
-                if (inputElement.value !== "") return;
-                inputElement.classList.remove("active");
-            });
-        });
 
-        toggle_btn.forEach((btn) => {
-            btn.addEventListener("click", () => {
-                main?.classList.toggle("sign-up-mode");
+            inputs.forEach((inp) => {
+                const inputElement = inp as HTMLInputElement;
+                inputElement.addEventListener("focus", () => {
+                    inputElement.classList.add("active");
+                });
+                inputElement.addEventListener("blur", () => {
+                    if (inputElement.value !== "") return;
+                    inputElement.classList.remove("active");
+                });
             });
-        });
-        bullets.forEach((bullet) => {
-            bullet.addEventListener("click", moveSlider);
-        });
+
+            toggle_btn.forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    main?.classList.toggle("sign-up-mode");
+                });
+            });
+            bullets.forEach((bullet) => {
+                bullet.addEventListener("click", moveSlider);
+            });
+        }
     })
 
     function moveSlider(this: HTMLElement) {
         const index = parseInt(this.dataset.value as string);
 
         if (!isNaN(index)) {
-            const currentImage = document.querySelector(`.img-${index}`);
-            const textSlider = document.querySelector(".text-group") as HTMLElement;
-            bullets.forEach((bull) => bull.classList.remove("active"));
-            this.classList.add("active");
-            if (currentImage) {
-                images.forEach((img) => img.classList.remove("show"));
-                currentImage.classList.add("show");
-            }
-            if (textSlider) {
-                textSlider.style.transform = `translateY(${-(index - 1) * 2.2}rem)`;
-            }
+            if (!process.browser) return null
+                const currentImage = document.querySelector(`.img-${index}`);
+                const textSlider = document.querySelector(".text-group") as HTMLElement;
+                bullets.forEach((bull) => bull.classList.remove("active"));
+                this.classList.add("active");
+                if (currentImage) {
+                    images.forEach((img) => img.classList.remove("show"));
+                    currentImage.classList.add("show");
+                }
+                if (textSlider) {
+                    textSlider.style.transform = `translateY(${-(index - 1) * 2.2}rem)`;
+                }
+            
         }
     }
 
@@ -322,18 +327,22 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
             }
             handler(event); // Call the handler only if the click is outside of the element
         };
-
-        document.addEventListener('mousedown', listener);
-        document.addEventListener('touchstart', listener);
+        if (process.browser) {
+            document.addEventListener('mousedown', listener);
+            document.addEventListener('touchstart', listener);
+        }
 
         return () => {
-            document.removeEventListener('mousedown', listener);
-            document.removeEventListener('touchstart', listener);
+            if (process.browser) {
+                document.removeEventListener('mousedown', listener);
+                document.removeEventListener('touchstart', listener);
+            }
         };
     }, [ref, handler]);
 };
 
 function getCookieValue(cookieName: string) {
+    if(!process.browser) return null;
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
         cookie = cookie.trim();
@@ -344,7 +353,7 @@ function getCookieValue(cookieName: string) {
     return null;
 }
 
-const socket = io('https://giga-chat-socket-7.onrender.com', {
+const socket = io('https://giga-chat-socket.onrender.com', {
     auth: {
         token: getCookieValue('username'),
     }
@@ -556,12 +565,11 @@ export const MainComponent: React.FC = () => {
 
     }
 
-    var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
 
     const handleAiSuggestion = async (role: string, msg: string) => {
         if (aiSuggestions.aiSuggestions) {
             try {
-
+                var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
                 const completion = await openai.chat.completions.create({
                     messages: [...openAiChats, { role: role, content: msg }],
                     model: "gpt-3.5-turbo",
@@ -620,8 +628,9 @@ export const MainComponent: React.FC = () => {
                 const finalFilteredData = filteredData?.filter((item: any) => !selectedUsernames?.includes(item?.username));
                 setResults(finalFilteredData);
                 const array = filteredData?.map((item: any) => item?.username)
-                setSelectedUser(data?.selectedUsers?.sort((a, b) => new Date(b?.lastChatTime) - new Date(a?.lastChatTime)));
-                const updatedSeenPendingMessages = {};
+                const arr = data?.selectedUsers?.sort((a: any, b: any) => new Date(b?.lastChatTime).getTime() - new Date(a?.lastChatTime).getTime());
+                setSelectedUser(arr);
+                const updatedSeenPendingMessages: { [key: string]: number } = {}; // Add type annotation
                 data?.selectedUsers?.forEach(user => {
                     if (user?.pending && user?.pending > 0) {
                         updatedSeenPendingMessages[user?.username] = user?.pending;
