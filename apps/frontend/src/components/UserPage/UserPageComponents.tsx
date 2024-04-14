@@ -42,8 +42,12 @@ export const removeFromOnlineUsers = async (username: string) => {
 
 }
 
+interface RoomComponentProps {
+    username: string,
+    roomId: string
+}
 
-export const MainComponent = ({ roomId, username }) => {
+export const MainComponent:React.FC<RoomComponentProps> = ({ roomId, username }) => {
     const [currentUser, setCurrentUser] = useCookies(['username'])
     const [messages, setMessages] = useState<object[]>([])
     const [profilePic, setProfilePic] = useState<string | null>(null)
