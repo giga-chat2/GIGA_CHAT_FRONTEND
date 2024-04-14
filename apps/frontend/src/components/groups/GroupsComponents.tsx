@@ -58,7 +58,7 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
 };
 
 
-const socket = io('http://localhost:5000')
+const socket = io('https://giga-chat-socket-7.onrender.com')
 
 function getCookieValue(cookieName: string) {
     const cookies = document.cookie.split(';');

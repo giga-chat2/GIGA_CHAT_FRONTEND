@@ -343,7 +343,7 @@ function getCookieValue(cookieName: string) {
     return null;
 }
 
-const socket = io('http://localhost:5000', {
+const socket = io('https://giga-chat-socket-7.onrender.com', {
     auth: {
         token: getCookieValue('username'),
     }
