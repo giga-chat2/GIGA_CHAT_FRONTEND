@@ -89,23 +89,27 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
             }
             handler(event); // Call the handler only if the click is outside of the element
         };
-
-        document.addEventListener('mousedown', listener);
-        document.addEventListener('touchstart', listener);
+        if (process.browser) {
+            document.addEventListener('mousedown', listener);
+            document.addEventListener('touchstart', listener);
+        }
 
         return () => {
-            document.removeEventListener('mousedown', listener);
-            document.removeEventListener('touchstart', listener);
+            if (process.browser) {
+                document.removeEventListener('mousedown', listener);
+                document.removeEventListener('touchstart', listener);
+            }
         };
     }, [ref, handler]);
 };
 
-const socket = io('https://giga-chat-socket-7.onrender.com', {
+const socket = io('https://giga-chat-socket.onrender.com', {
     auth: {
         token: getCookieValue('username'),
     }
 })
 function getCookieValue(cookieName: string) {
+    if(!process.browser) return null;
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
         cookie = cookie.trim();
@@ -145,10 +149,10 @@ export const MainComponent: React.FC = () => {
         if (session?.status === 'authenticated') {
             setEmailCookie('email', session?.data?.user?.email, { path: '/' })
         }
-        else if(session?.status === 'unauthenticated'){
+        else if (session?.status === 'unauthenticated') {
             window.location.href = '/pages/auth'
         }
-    },[])
+    }, [])
 
 
     useEffect(() => {
@@ -683,7 +687,7 @@ export const MainComponent: React.FC = () => {
                                                 {/* {seenPendingMessages[user?.username] && seenPendingMessages[user?.username] > 0 ? <>
                                                     <div className='w-[50%] h-[100%]  flex justify-center items-center ' ><p className='w-[20px] h-[20px] rounded-full text-[#3d3c3c] bg-white font-semibold  flex justify-center items-center ' >{seenPendingMessages[user?.username]}</p></div>
                                                 </> : <> */}
-                                                    <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                                <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
                                                 {/* </>} */}
                                             </div>
                                         </div>
