@@ -31,7 +31,7 @@ export const removeFromOnlineUsers = async (username: string) => {
     try {
         console.log("removeOnlineUsersCalled")
         socket.emit('remove_online', username)
-        const response = await fetch('http://localhost:4000/removeFromOnlineUsers', {
+        const response = await fetch('https://giga-chat-2-backend.vercel.app/removeFromOnlineUsers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -58,7 +58,7 @@ export const MainComponent = ({ roomId, username }) => {
 
     const fetchUserChats = async () => {
         try {
-            const res = await axios.post('http://localhost:4000/getChats', { currentUser: currentUser.username, selectedUser: username })
+            const res = await axios.post('https://giga-chat-2-backend.vercel.app/getChats', { currentUser: currentUser.username, selectedUser: username })
             setProfilePic(res.data.selectedUserPic)
             setMessages(res.data.chats)
             console.log(res.data)
@@ -156,7 +156,7 @@ export const MainComponent = ({ roomId, username }) => {
         console.log('huhu')
         try {
             if (typedMessage.length > 0) {
-                const res = await axios.post('http://localhost:4000/addChat', { message: typedMessage, room_Id: roomId, sender: currentUser.username, selectedUserName: username, email: currentUser.email })
+                const res = await axios.post('https://giga-chat-2-backend.vercel.app/addChat', { message: typedMessage, room_Id: roomId, sender: currentUser.username, selectedUserName: username, email: currentUser.email })
                 console.log(res.data)
                 if (messages) {
                     setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
@@ -181,7 +181,7 @@ export const MainComponent = ({ roomId, username }) => {
             <div className='w-[100%] h-[15%] flex rounded overflow-y-auto p-2 ' >
                 <div className='w-[100%] h-[100%] flex justify-center items-center rounded-md border border-[#1e232c] ' >
                     <div className='w-[30%] h-[100%] flex justify-center items-center ' >
-                        <img src={profilePic && profilePic.length > 0 ? `http://localhost:4000/getprofilePic/${profilePic}` : ``} className='w-[50px] border border-white h-[50px] rounded-full' />
+                        <img src={profilePic && profilePic.length > 0 ? `https://giga-chat-2-backend.vercel.app/getprofilePic/${profilePic}` : ``} className='w-[50px] border border-white h-[50px] rounded-full' />
                     </div>
                     <div className='w-[70%] h-[100%] flex flex-col justify-center text-white pl-2' >
                         <h3 className='text-xl font-bold'>{username}</h3>
@@ -218,7 +218,7 @@ export const MainComponent = ({ roomId, username }) => {
                                     <div className='w-[35px] h-[35px] mt-auto  flex justify-center items-center overflow-hidden rounded-full  ' >
                                         {profilePicPath.profilePicPath && profilePicPath.profilePicPath.length > 0 ? <>
                                             <img
-                                                src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
+                                                src={`https://giga-chat-2-backend.vercel.app/getprofilePic/${profilePicPath.profilePicPath}`}
                                                 alt="profile"
                                                 style={{ width: "100%", height: "100%", objectFit: "cover", marginTop: "auto" }}
                                             />
@@ -231,7 +231,7 @@ export const MainComponent = ({ roomId, username }) => {
                                     <div className='w-[35px] h-[35px] mt-auto flex justify-center items-center overflow-hidden rounded-full  ' >
                                         {profilePic && profilePic.length > 0 ? <>
                                             <img
-                                                src={`http://localhost:4000/getprofilePic/${profilePic}`}
+                                                src={`https://giga-chat-2-backend.vercel.app/getprofilePic/${profilePic}`}
                                                 alt="profile"
                                                 style={{ width: "100%", height: "100%", objectFit: "cover", marginTop: "auto" }}
                                             />

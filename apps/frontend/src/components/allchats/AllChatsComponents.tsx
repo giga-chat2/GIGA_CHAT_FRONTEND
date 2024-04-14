@@ -138,7 +138,7 @@ export const InitialPopUp: React.FC = () => {
         setCurrentUser('username', username, { path: '/' })
         try {
 
-            const res = await fetch('http://localhost:4000/enterDetails', {
+            const res = await fetch('https://giga-chat-2-backend.vercel.app/enterDetails', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -354,7 +354,7 @@ export const addToOnlineUsers = async (status: boolean, username: string) => {
     if (status) {
         try {
             socket.emit('online', username)
-            const response = await fetch('http://localhost:4000/addToOnlineUsers', {
+            const response = await fetch('https://giga-chat-2-backend.vercel.app/addToOnlineUsers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -368,7 +368,7 @@ export const addToOnlineUsers = async (status: boolean, username: string) => {
 export const removeFromOnlineUsers = async (status: boolean, username: string) => {
     try {
         socket.emit('remove_online', username)
-        const response = await fetch('http://localhost:4000/removeFromOnlineUsers', {
+        const response = await fetch('https://giga-chat-2-backend.vercel.app/removeFromOnlineUsers', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -501,7 +501,7 @@ export const MainComponent: React.FC = () => {
 
     const addPending = async (recipient: string) => {
         try {
-            const res = await axios.post('http://localhost:4000/addPendingMessages', { recipient: recipient, currentUser: currentUser?.username })
+            const res = await axios.post('https://giga-chat-2-backend.vercel.app/addPendingMessages', { recipient: recipient, currentUser: currentUser?.username })
 
         } catch (e) { console.log(e) }
     }
@@ -603,7 +603,7 @@ export const MainComponent: React.FC = () => {
 
     const fetchInitialData = async () => {
         try {
-            await fetch('http://localhost:4000/getUsernames', {
+            await fetch('https://giga-chat-2-backend.vercel.app/getUsernames', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -702,7 +702,7 @@ export const MainComponent: React.FC = () => {
             setRoomId(room_ka_ID)
         }
         try {
-            const res = await fetch('http://localhost:4000/addUserInSelectedUsers', {
+            const res = await fetch('https://giga-chat-2-backend.vercel.app/addUserInSelectedUsers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -753,7 +753,7 @@ export const MainComponent: React.FC = () => {
         }
         try {
             console.log(currentUser?.username, initialSelectedUserName)
-            const res = await axios.post('http://localhost:4000/getChats', {
+            const res = await axios.post('https://giga-chat-2-backend.vercel.app/getChats', {
                 currentUser: currentUserKaNaam ? currentUserKaNaam : currentUser?.username,
                 selectedUser: initialSelectedUserName,
             })
@@ -772,7 +772,7 @@ export const MainComponent: React.FC = () => {
         setPlaceholderVal('')
         handleAiSuggestion("user", "Provide folow up in maximum 10 words for this :" + typedMessage)
 
-        const res = await fetch('http://localhost:4000/addChat', {
+        const res = await fetch('https://giga-chat-2-backend.vercel.app/addChat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -831,7 +831,7 @@ export const MainComponent: React.FC = () => {
 
     const handleUserArchive = async () => {
         try {
-            const res = await fetch('http://localhost:4000/archiveUser', {
+            const res = await fetch('https://giga-chat-2-backend.vercel.app/archiveUser', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -880,7 +880,7 @@ export const MainComponent: React.FC = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const res = await fetch('http://localhost:4000/deleteUser', {
+                    const res = await fetch('https://giga-chat-2-backend.vercel.app/deleteUser', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -950,7 +950,7 @@ export const MainComponent: React.FC = () => {
                 formData.append('receiver', selectedUser[index]?.username);
             }
             try {
-                const response = await axios.post('http://localhost:4000/uploadAudio', formData)
+                const response = await axios.post('https://giga-chat-2-backend.vercel.app/uploadAudio', formData)
                 const data = response.data;
                 const audioURL = data.audioURL;
                 setMessages((prevMessages) => [{ audioURL: audioURL, isSender: true }, ...prevMessages])
@@ -1299,7 +1299,7 @@ export const MainComponent: React.FC = () => {
                                         <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                             <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
                                                 {result?.profilePic ? <><img
-                                                    src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
+                                                    src={`https://giga-chat-2-backend.vercel.app/getprofilePic/${result?.profilePic}`}
                                                     alt="profile"
                                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                 /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
@@ -1321,7 +1321,7 @@ export const MainComponent: React.FC = () => {
                                         <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                             <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
                                                 {user?.profilePic ? <><img
-                                                    src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
+                                                    src={`https://giga-chat-2-backend.vercel.app/getprofilePic/${user?.profilePic}`}
                                                     alt="profile"
                                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                 /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}

@@ -54,7 +54,7 @@ const NavBar = ({ defaultValue }) => {
     } else if (tab === "archieved") {
       console.log("archieved")
       try {
-        const response = await axios.post('http://localhost:4000/getArchivedUsers', { username: currentUser.username })
+        const response = await axios.post('https://giga-chat-2-backend.vercel.app/getArchivedUsers', { username: currentUser.username })
         const data = response.data
         console.log(data)
         if (data.archivedUsers && data.archivedUsers.length > 0) {
@@ -85,7 +85,7 @@ const NavBar = ({ defaultValue }) => {
     fileInputRef.current.click();
   };
   // useEffect(() => {
-  //   axios.get('http://localhost:4000/getprofilePic').then((response) => {
+  //   axios.get('https://giga-chat-2-backend.vercel.app/getprofilePic').then((response) => {
   //     console.log(response)
   //     setSelectedImage(response.data)
   //     // const contentType = response.headers['content-type'];
@@ -112,7 +112,7 @@ const NavBar = ({ defaultValue }) => {
       formData.append('profilePic', selectedFile);
 
 
-      const response = await axios.post('http://localhost:4000/uploadProfilePic', formData);
+      const response = await axios.post('https://giga-chat-2-backend.vercel.app/uploadProfilePic', formData);
       if (response.status === 200) {
         const Toast = Swal.mixin({
           toast: true,
@@ -160,7 +160,7 @@ const NavBar = ({ defaultValue }) => {
     setAiAuggestions('aiSuggestions', !isAISuggestions, { path: '/' })
     setIsAISuggestions(!isAISuggestions)
     try {
-      const response = await axios.post('http://localhost:4000/updateAISuggestions', { currentUsername: currentUser.username })
+      const response = await axios.post('https://giga-chat-2-backend.vercel.app/updateAISuggestions', { currentUsername: currentUser.username })
     } catch (err) {
       console.log(err)
     }
@@ -178,7 +178,7 @@ const NavBar = ({ defaultValue }) => {
     setDisplayStatus('displayStatus', !dispStatus, { path: '/' })
     setDispStatus(!dispStatus)
     try {
-      await axios.post('http://localhost:4000/updateDisplayStatus', { currentUsername: currentUser.username })
+      await axios.post('https://giga-chat-2-backend.vercel.app/updateDisplayStatus', { currentUsername: currentUser.username })
     } catch (err) {
       console.log(err)
     }
@@ -266,7 +266,7 @@ const NavBar = ({ defaultValue }) => {
       } else {
         setDispCodeDiv(true)
         try {
-          const response = await axios.post('http://localhost:4000/sentCode', { email: email })
+          const response = await axios.post('https://giga-chat-2-backend.vercel.app/sentCode', { email: email })
           if (response.status === 200) {
             setHashedVerificationCode(response.data.verificationCode)
           }
@@ -299,7 +299,7 @@ const NavBar = ({ defaultValue }) => {
         return
       } else {
         try {
-          const response = await axios.post('http://localhost:4000/updateEmail', { oldEmail: emailCookie.email, newEmail: email, verificationCode: enteredVerificationCode, hashedVerificationCode: hashedVerificationCode })
+          const response = await axios.post('https://giga-chat-2-backend.vercel.app/updateEmail', { oldEmail: emailCookie.email, newEmail: email, verificationCode: enteredVerificationCode, hashedVerificationCode: hashedVerificationCode })
           console.log(response.status)
           if (response.status === 200) {
             setDispCodeDiv(false)

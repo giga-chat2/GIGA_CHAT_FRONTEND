@@ -252,7 +252,7 @@ export const MainComponent: React.FC = () => {
 
     const fetchInitialData = async () => {
         try {
-            await fetch('http://localhost:4000/getArchivedUsers', {
+            await fetch('https://giga-chat-2-backend.vercel.app/getArchivedUsers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -312,7 +312,7 @@ export const MainComponent: React.FC = () => {
         setSearchTerm('')
         setRoomId(nanoid())
         try {
-            const res = fetch('http://localhost:4000/addUserInSelectedUsers', {
+            const res = fetch('https://giga-chat-2-backend.vercel.app/addUserInSelectedUsers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -350,7 +350,7 @@ export const MainComponent: React.FC = () => {
         setRoomId(room_ka_ID)
 
         try {
-            const res = await axios.post('http://localhost:4000/getChats', {
+            const res = await axios.post('https://giga-chat-2-backend.vercel.app/getChats', {
                 currentUser: currentUser?.username,
                 selectedUser: initialSelectedUserName,
             }).then((res) => {
@@ -376,7 +376,7 @@ export const MainComponent: React.FC = () => {
 
     const onChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        const res = await fetch('http://localhost:4000/addChat', {
+        const res = await fetch('https://giga-chat-2-backend.vercel.app/addChat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -428,7 +428,7 @@ export const MainComponent: React.FC = () => {
 
     const handleUserArchive = async () => {
         try {
-            const res = await fetch('http://localhost:4000/unArchiveUser', {
+            const res = await fetch('https://giga-chat-2-backend.vercel.app/unArchiveUser', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -469,7 +469,7 @@ export const MainComponent: React.FC = () => {
 
     const handleUserDelete = async () => {
         try {
-            const res = await fetch('http://localhost:4000/deleteUser', {
+            const res = await fetch('https://giga-chat-2-backend.vercel.app/deleteUser', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -538,7 +538,7 @@ export const MainComponent: React.FC = () => {
                 formData.append('receiver', selectedUser[index]?.username);
             }
             try {
-                const response = await axios.post('http://localhost:4000/uploadAudio', formData)
+                const response = await axios.post('https://giga-chat-2-backend.vercel.app/uploadAudio', formData)
                 const data = response.data;
                 const audioURL = data.audioURL;
                 setMessages((prevMessages) => [{ audioURL: audioURL, isSender: true }, ...prevMessages])

@@ -68,7 +68,7 @@ export const MainComponent: React.FC = () => {
 
     const fetchInitialData = async () => {
         try {
-            const res = await axios.post("http://localhost:4000/getAIChats", { currentUsername: currentUser?.username })
+            const res = await axios.post("https://giga-chat-2-backend.vercel.app/getAIChats", { currentUsername: currentUser?.username })
             const data = res.data
             setChatHistory(data)
         } catch (e) {
@@ -116,7 +116,7 @@ export const MainComponent: React.FC = () => {
         try {
             const now = new Date();
             const currentTime = `${now.getMinutes()}:${now.getSeconds()}`;
-            const res = await axios.post("http://localhost:4000/addAIChat", { message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'gemma' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : modelName === 'gemini' ? 'Gemini-Pro' :  null} your AI assistant. How can I help you?`, session: session, currentUsername: currentUser?.username, model: modelName, startingTime: currentTime, endingTime: currentTime, isSender: false })
+            const res = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: `Hello, I am ${modelName === 'mistral' ? 'Mixtral-8x7B' : modelName === 'openai' ? 'GPT 3.5-turbo' : modelName === 'gemma' ? 'Gemma-7b' : modelName === 'meta' ? 'LLAMA2' : modelName === 'antrophic' ? 'Claude 2' : modelName === 'gemini' ? 'Gemini-Pro' :  null} your AI assistant. How can I help you?`, session: session, currentUsername: currentUser?.username, model: modelName, startingTime: currentTime, endingTime: currentTime, isSender: false })
             const data = res.data
             console.log(data)
         } catch (e) {
@@ -146,10 +146,10 @@ export const MainComponent: React.FC = () => {
         setTypedMessage("")
         let session = sessionStorage.getItem('sessionId')
         try {
-            const res = await axios.post("http://localhost:4000/modelResponse", { model: model, message: typedMessage })
+            const res = await axios.post("https://giga-chat-2-backend.vercel.app/modelResponse", { model: model, message: typedMessage })
             setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false }, ...prevMessages])
-            const userResponse = await axios.post("http://localhost:4000/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true })
-            const botResponse = await axios.post("http://localhost:4000/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime })
+            const userResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true })
+            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime })
             setBotTyping(false)
         } catch (e) {
             console.log(e)
@@ -225,7 +225,7 @@ export const MainComponent: React.FC = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const res = await axios.post('http://localhost:4000/deleteAiChat', { currentUsername: currentUser?.username, chat: chatHistory[idx] })
+                    const res = await axios.post('https://giga-chat-2-backend.vercel.app/deleteAiChat', { currentUsername: currentUser?.username, chat: chatHistory[idx] })
                     if(res.status == 200){
                         Swal.fire(
                             'Deleted!',
