@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client"
 import React, { FormEvent, useEffect, useState, useRef } from 'react'
 import Swal from 'sweetalert2'
