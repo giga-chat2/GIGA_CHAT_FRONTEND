@@ -628,8 +628,7 @@ export const MainComponent: React.FC = () => {
                 const finalFilteredData = filteredData?.filter((item: any) => !selectedUsernames?.includes(item?.username));
                 setResults(finalFilteredData);
                 const array = filteredData?.map((item: any) => item?.username)
-                const arr = data?.selectedUsers?.sort((a: any, b: any) => new Date(b?.lastChatTime).getTime() - new Date(a?.lastChatTime).getTime());
-                setSelectedUser(arr);
+                setSelectedUser(data?.selectedUsers?.sort((a: any, b: any) => new Date(b?.lastChatTime).getTime() - new Date(a?.lastChatTime).getTime()));
                 const updatedSeenPendingMessages: { [key: string]: number } = {}; // Add type annotation
                 data?.selectedUsers?.forEach(user => {
                     if (user?.pending && user?.pending > 0) {
