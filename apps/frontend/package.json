@@ -42,7 +42,16 @@
     "smooth-scrollbar-react": "^2.4.1",
     "socket.io-client": "^4.7.4",
     "utf-8-validate": "^5.0.10",
-    "ws": "^8.16.0"
+    "ws": "^8.16.0",
+    "express-zip": "^3.0.0",
+    "next-auth": "^4.24.6",
+    "react-chat-bubble": "^0.8.7",
+    "react-native-chat-bubble": "^1.0.0",
+    "react-native-size-matters": "^0.4.2",
+    "react-native-svg": "^15.0.0",
+    "react-redux": "^9.1.0",
+    "react-toastify": "^10.0.4",
+    "sweetalert2": "^11.10.5"
   },
   "devDependencies": {
     "@types/firebase": "^3.2.1",
