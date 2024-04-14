@@ -42,4 +42,3 @@ apps/frontend/node_modules
 apps/frontend/src/.env
 apps/backend/node_modules
 apps/backend/.env
-apps/backend/src/service_account.json:1
