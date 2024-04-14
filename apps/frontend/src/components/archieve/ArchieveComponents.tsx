@@ -580,7 +580,7 @@ export const MainComponent: React.FC = () => {
                 <div className='w-[100%] h-[40%] relative border-b border-white flex justify-center items-center' >
                     <div className='w-[200px] h-[200px] rounded-full border border-white overflow-hidden ' >
                         {selectedUser && selectedUser[index]?.profilePic ? <><img
-                            src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                            src={`${selectedUser[index]?.profilePic}`}
                             alt="profile"
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                         /></> : <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />}
@@ -644,7 +644,7 @@ export const MainComponent: React.FC = () => {
                                             <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                 <div className='relative w-[65px] h-[65px] border-none overflow-hidden rounded-full flex flex-center items-center justify-center' >
                                                     {result?.profilePic ? <><img
-                                                        src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
+                                                        src={`${result?.profilePic}`}
                                                         alt="profile"
                                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                     /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
@@ -667,7 +667,7 @@ export const MainComponent: React.FC = () => {
                                             <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                 <div className='relative w-[65px] h-[65px] border-none overflow-hidden rounded-full flex flex-center items-center justify-center' >
                                                     {user.profilePic ? <><img
-                                                        src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
+                                                        src={`${user?.profilePic}`}
                                                         alt="profile"
                                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                     /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
@@ -700,7 +700,7 @@ export const MainComponent: React.FC = () => {
                                 <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
                                     <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
                                         <img
-                                            src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                                            src={`${selectedUser[index]?.profilePic}`}
                                             alt="profile"
                                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                         />
@@ -749,7 +749,7 @@ export const MainComponent: React.FC = () => {
                                         <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex   justify-end ' >
                                             {profilePicPath?.profilePicPath ? <>
                                                 <img
-                                                    src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
+                                                    src={`${profilePicPath.profilePicPath}`}
                                                     alt="profile"
                                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                 />
@@ -762,7 +762,7 @@ export const MainComponent: React.FC = () => {
                                         <div className='rounded-full border-none flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto] ' >
                                             {/* <PersonIcon sx={{ marginTop: "100%", border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} /> */}
                                             {selectedUser && selectedUser[index]?.profilePic ? <><img
-                                                src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
+                                                src={`${selectedUser[index]?.profilePic}`}
                                                 alt="profile"
                                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                             /></> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />

@@ -134,7 +134,7 @@ export const MainComponent: React.FC = () => {
             // }
 
             socket.on('receive_grp_message', (data) => {
-                console.log(data)
+                console.log(data.groupName, getCookieValue('currentGroupName'))
                 if (data.groupName === getCookieValue('currentGroupName')) {
                     setRecievedMessage(data.message)
                     setSender(data.sender)
@@ -479,6 +479,7 @@ export const MainComponent: React.FC = () => {
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files[0];
+        setSelectedGroups(selectedGroups.map((group, index) => { return index === idx ? { ...group, profilePic: URL.createObjectURL(selectedFile) } : group }))
 
         const reader = new FileReader();
         console.log(1, selectedFile, e.target.result)
@@ -714,7 +715,7 @@ export const MainComponent: React.FC = () => {
                         {selectedGroups[idx]?.profilePic ? <>
 
                             <img
-                                src={selectedImage ? selectedImage : `http://localhost:4000/getprofilePic/${selectedGroups[idx].profilePic}`}
+                                src={selectedImage ? selectedImage : `${selectedGroups[idx].profilePic}`}
                                 alt="profile"
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
@@ -747,7 +748,7 @@ export const MainComponent: React.FC = () => {
                         <div className='w-[100%] h-[20%] flex justify-center items-center text-white text-xl italic ' >Admins</div>
                         <AvatarGroup sx={{ width: "80%", height: "80%", display: 'flex', justifyContent: "center", alignItems: "center" }} max={4}>
                             {selectedDetailedGroupAdmins?.map((admin, index) => (
-                                <Avatar sx={{ width: "50px", height: "50px" }} alt={admin.username} src={`http://localhost:4000/getprofilePic/${admin.profilePic}`} />
+                                <Avatar sx={{ width: "50px", height: "50px" }} alt={admin.username} src={`${admin.profilePic}`} />
                             ))}
                         </AvatarGroup>
                     </div>
@@ -755,7 +756,7 @@ export const MainComponent: React.FC = () => {
                         <div className='w-[100%] h-[20%] flex justify-center items-center  text-white text-xl italic' >Members</div>
                         <AvatarGroup sx={{ width: "80%", height: "80%", display: 'flex', justifyContent: "center", alignItems: "center" }} max={4}>
                             {selectedDetailedGroupMembers?.map((member, index) => (
-                                <Avatar sx={{ width: "50px", height: "50px" }} alt={member.username} src={`http://localhost:4000/getprofilePic/${member.profilePic}`} />
+                                <Avatar sx={{ width: "50px", height: "50px" }} alt={member.username} src={`${member.profilePic}`} />
                             ))}
                         </AvatarGroup>
                     </div>
@@ -790,7 +791,7 @@ export const MainComponent: React.FC = () => {
                 <div className={`w-[35vw] h-[55vh] border flex-col z-10 bg-black justify-center hidden border-white absolute left-[35%] top-[20%] rounded-lg ${dispCreateGroupPopUp === null ? '' : dispCreateGroupPopUp ? 'appear' : 'disappear'}`} onClick={(e) => e.stopPropagation()} >
                     <form className='w-[100%] h-[100%] relative ' onSubmit={handleCreateGroup}>
                         <div className=' w-[100%] h-[20%] font-semibold  flex text-2xl rounded-lg text-center justify-center items-center text-white'>Create your Group</div>
-                        <div className=' w-[100%] h-[20%] font-semibold  flex text-center justify-center items-center text-white'><input type="text" className='bg-black text rounded text-white w-[75%] h-[80%] text-center border border-white outline-none groupNameInput' onChange={(e: any) => setGroupName(e.target.value)} value={groupName} placeholder='Enter your group name' required /></div>
+                        <div className=' w-[100%] h-[20%] font-semibold  flex text-center justify-center items-center text-white'><input type="text" className='bg-black text rounded text-white w-[65%] h-[80%] text-center border border-white outline-none groupNameInput' onChange={(e: any) => setGroupName(e.target.value)} value={groupName} placeholder='Enter your group name' required /></div>
                         <div className=' w-[100%] h-[20%] font-semibold  flex text-center justify-center items-center text-white'>
                             <Multiselect options={options} placeholder='Select members' displayValue='username' className='multi-select' onSelect={(selectedList, selectedItem) => { setSelectedGroupMembers(selectedList) }} onRemove={(selectedList, removedItem) => { setSelectedGroupMembers(selectedList) }}
                                 style={{
@@ -872,7 +873,7 @@ export const MainComponent: React.FC = () => {
                                             <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                 <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
                                                     {result?.profilePic ? <><img
-                                                        src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
+                                                        src={`${result?.profilePic}`}
                                                         alt="profile"
                                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                     /></> : <GroupsIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
@@ -895,7 +896,7 @@ export const MainComponent: React.FC = () => {
                                             <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
                                                 <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
                                                     {user?.profilePic ? <><img
-                                                        src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
+                                                        src={`${user?.profilePic}`}
                                                         alt="profile"
                                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                     /></> : <GroupsIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
@@ -928,7 +929,7 @@ export const MainComponent: React.FC = () => {
                                         <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
                                             {selectedGroups[idx]?.profilePic ? <>
                                                 <img
-                                                    src={`http://localhost:4000/getprofilePic/${selectedGroups[idx]?.profilePic}`}
+                                                    src={`${selectedGroups[idx]?.profilePic}`}
                                                     alt="profile"
                                                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                 />
@@ -937,23 +938,21 @@ export const MainComponent: React.FC = () => {
                                             </>}
                                         </div>
                                     </div>
-                                    <div className='w-[15%] h-[100%]  flex flex-col justify-center items-center ' >
+                                    <div className='w-[50%] h-[100%]  flex flex-col justify-center items-center ' >
                                         <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
                                             <p className='w-[100%] h-[100%] flex justify-start items-center text-center text-white font-bold text-xl mt-3 ' >{selectedGroups[idx]?.groupName}</p>
                                         </div>
                                         <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
                                             <p className='w-[100%] h-[100%] flex justify-start items-center text-center  text-white font-thin text-sm italic ' >
                                                 {selectedGroups[idx].members && selectedGroups[idx].members.map((user, index) => (
-                                                    <p key={index} className="mr-2">
+                                                    <p key={index} className="mr-2 ">
                                                         {user.username}{index !== selectedGroups[idx].members.length - 1 && ','}
                                                     </p>
                                                 ))}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className='w-[10%] flex justify-center items-center h-[100%]  ml-auto ' >
-                                        <MoreVertIcon sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
-                                    </div>
+                                    <MoreVertIcon component="div" sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
 
                                 </div>
                             </div>
@@ -971,15 +970,15 @@ export const MainComponent: React.FC = () => {
                                                     {msg.message}
                                                 </>)}
                                             </div>
-                                            <div className='rounded-full border-none w-[40px] h-[40px] mt-auto flex justify-center items-center overflow-hidden ' >
-                                                {profilePicPath.profilePicPath ? <> <img src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`} alt="" /> </> : <>
+                                            <div className='rounded-full border border-white w-[40px] h-[40px] mt-auto flex justify-center items-center overflow-hidden ' >
+                                                {profilePicPath.profilePicPath && profilePicPath.profilePicPath  !== "undefined" ? <> <img src={`${profilePicPath.profilePicPath}`} alt="" /> </> : <>
                                                     <PersonIcon sx={{ borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
                                                 </>}
                                             </div>
 
                                         </> : <>
                                             <div className='rounded-full flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto] ' >
-                                                {msg?.profilePic?.length > 0 && msg?.profilePic ? <img src={`http://localhost:4000/getprofilePic/${msg?.profilePic}`} alt={msg.sender} /> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />}
+                                                {msg?.profilePic?.length > 0 && msg?.profilePic && msg?.profilePic !== "undefined" ? <img src={`${msg?.profilePic}`} alt={msg.sender} /> : <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />}
                                                 {/* <PersonIcon sx={{ marginTop: "100%", border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} /> */}
                                             </div>
                                             <div className={`w-[fit-content] h-[fit-content] mt-[auto] font-thin text-sm mb-2 border-none ${msg.sender === currentUser.username ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>

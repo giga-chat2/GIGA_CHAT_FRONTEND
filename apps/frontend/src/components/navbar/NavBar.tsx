@@ -436,7 +436,7 @@ const NavBar = ({ defaultValue }) => {
             {/* {profilePicPath.profilePicPath ? */}
             {retrievedProfilePic ? <>
               <img
-                src={selectedImage ? selectedImage : `http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
+                src={selectedImage ? selectedImage : `${profilePicPath.profilePicPath}`}
                 alt="profile"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />

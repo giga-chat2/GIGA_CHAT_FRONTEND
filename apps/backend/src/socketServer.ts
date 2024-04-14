@@ -75,6 +75,7 @@ io.on('connection', (socket) => {
       socket.broadcast.emit('check_RoomId', { room_Id: roomId, email, sender, receiver });
     });
     socket.on('online', (data) => {
+      console.log('user connected', data)
       socket.broadcast.emit('onlineUsers', data);
     });
     socket.on('remove_online', (data) => {
@@ -114,6 +115,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('send_grp_message',(data)=>{
+      console.log(data)
       socket.broadcast.emit('receive_grp_message',data)
     })
 

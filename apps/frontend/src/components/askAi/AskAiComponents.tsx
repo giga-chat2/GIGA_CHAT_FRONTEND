@@ -317,49 +317,49 @@ export const MainComponent: React.FC = () => {
                 {dropdownClicked ? <>
                     <div className={`w-[15%] h-[25%] absolute bg-black z-50 right-[4%] top-[5%] rounded-md flex flex-col border border-white ml-[auto] model-options-appear `}  >
                         <div className='h-[20%] rounded-t-md flex w-[100%] cursor-pointer items-center justify-start hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 1, "openai")} >
-                            <img src={`http://localhost:4000/getprofilePic/openai.png`} alt="profile" style={{ width: "25px", height: "25px", marginLeft: "5px", objectFit: "cover" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono model-option-text' >GPT 3.5 turbo</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fopenai.png?alt=media&token=9e6f0bd8-a12c-434a-a41d-045575fddd1b`} alt="profile" style={{ width: "25px", height: "25px", marginLeft: "5px", objectFit: "cover" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono model-option-text' >GPT 3.5 turbo</p>
                         </div>
                         <div className='h-[20%]  w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 2, "antrophic")} >
-                            <img src={`http://localhost:4000/getprofilePic/antrophic.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono model-option-text' >Claude 2</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fantrophic.png?alt=media&token=8720acb0-83f6-4faf-9628-cce425f1221b`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono model-option-text' >Claude 2</p>
 
                         </div>
                         <div className='h-[20%] w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 3, "meta")} >
-                            <img src={`http://localhost:4000/getprofilePic/meta.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Llama 2</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmeta.png?alt=media&token=fd3ae277-ea8c-49c4-8cff-3b6f228cd095`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Llama 2</p>
 
                         </div>
                         <div className='h-[20%] w-[100%] flex items-center justify-start cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 4, "gemma")} >
-                            <img src={`http://localhost:4000/getprofilePic/gemma.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemma-7b</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemma.png?alt=media&token=88575525-9045-4ca8-bb0b-e152b17fd8d6`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemma-7b</p>
 
                         </div>
                         <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 5, "mistral")} >
-                            <img src={`http://localhost:4000/getprofilePic/mistral.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Mixtral-8x7B</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmistral.png?alt=media&token=a4049518-19f5-4e41-acce-89c7e598a4af`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Mixtral-8x7B</p>
                         </div>
                         <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white hover:text-black model-option ' onClick={() => handleModelChoose(false, 5, "gemini")} >
-                            <img src={`http://localhost:4000/getprofilePic/gemini.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemini-Pro</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemini.png?alt=media&token=2e11ca17-ba6a-4835-9721-31435c0cbf93`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono model-option-text' >Gemini-Pro</p>
                         </div>
                     </div>
                 </> : <>
                     <div className={`w-[15%] h-[25%] absolute z-50 bg-black right-[4%] top-[5%] rounded-md flex flex-col border border-white ml-[auto] model-options-disappear `} >
                         <div className='h-[20%] rounded-t-md flex w-[100%] cursor-pointer items-center justify-start hover:bg-white ' >
-                            <img src={`http://localhost:4000/getprofilePic/openai.png`} alt="profile" style={{ width: "25px", height: "25px", marginLeft: "5px", objectFit: "cover" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono' >GPT 3.5 turbo</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fopenai.png?alt=media&token=9e6f0bd8-a12c-434a-a41d-045575fddd1b`} alt="profile" style={{ width: "25px", height: "25px", marginLeft: "5px", objectFit: "cover" }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono' >GPT 3.5 turbo</p>
                         </div>
                         <div className='h-[20%]  w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white ' >
-                            <img src={`http://localhost:4000/getprofilePic/antrophic.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono' >Claude 2</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fantrophic.png?alt=media&token=8720acb0-83f6-4faf-9628-cce425f1221b`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black font-mono' >Claude 2</p>
 
                         </div>
                         <div className='h-[20%] w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white' >
-                            <img src={`http://localhost:4000/getprofilePic/meta.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Llama 2</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmeta.png?alt=media&token=fd3ae277-ea8c-49c4-8cff-3b6f228cd095`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Llama 2</p>
 
                         </div>
                         <div className='h-[20%] w-[100%] flex items-center justify-start cursor-pointer hover:bg-white' >
-                            <img src={`http://localhost:4000/getprofilePic/gemma.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemma-7b</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemma.png?alt=media&token=88575525-9045-4ca8-bb0b-e152b17fd8d6`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemma-7b</p>
 
                         </div>
                         <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white ' >
-                            <img src={`http://localhost:4000/getprofilePic/mistral.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Mixtral-8x7B</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmistral.png?alt=media&token=a4049518-19f5-4e41-acce-89c7e598a4af`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Mixtral-8x7B</p>
                         </div>
                         <div className='h-[20%]  rounded-b-md w-[100%] flex items-center justify-start  cursor-pointer hover:bg-white ' >
-                            <img src={`http://localhost:4000/getprofilePic/gemini.png`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemini-Pro</p>
+                            <img src={`https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemini.png?alt=media&token=2e11ca17-ba6a-4835-9721-31435c0cbf93`} alt="profile" style={{ width: "25px", height: "25px", objectFit: "cover", marginLeft: "5px", }} /> <p className='text-white ml-2 hover:bg-white hover:text-black  font-mono' >Gemini-Pro</p>
                         </div>
                     </div>
                 </>}
@@ -388,7 +388,7 @@ export const MainComponent: React.FC = () => {
                                             <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex justify-end ' >
                                                 {dispProfilePic ? <>
                                                     <img
-                                                        src={`http://localhost:4000/getprofilePic/${profilePicPath?.profilePicPath}`}
+                                                        src={`${profilePicPath?.profilePicPath}`}
                                                         alt="profile"
                                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                                     />
@@ -401,7 +401,7 @@ export const MainComponent: React.FC = () => {
                                             <div className='border-none flex items-center justify-center w-[50px] h-[50px] overflow-hidden mt-[auto]' >
 
                                                 <img
-                                                    src={`http://localhost:4000/getprofilePic/${msg.model}.png`}
+                                                    src={ msg.model === 'openai' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fopenai.png?alt=media&token=9e6f0bd8-a12c-434a-a41d-045575fddd1b` : msg.model === 'antrophic' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fantrophic.png?alt=media&token=8720acb0-83f6-4faf-9628-cce425f1221b` : msg.model === 'meta' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmeta.png?alt=media&token=fd3ae277-ea8c-49c4-8cff-3b6f228cd095` : msg.model === 'gemma' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemma.png?alt=media&token=88575525-9045-4ca8-bb0b-e152b17fd8d6` : msg.model === 'mistral' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmistral.png?alt=media&token=a4049518-19f5-4e41-acce-89c7e598a4af` : msg.model === 'gemini' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemini.png?alt=media&token=2e11ca17-ba6a-4835-9721-31435c0cbf93` : null}
                                                     alt="profile"
                                                     style={{ border: "none", objectFit: "cover", backgroundColor: "black" }}
                                                 />

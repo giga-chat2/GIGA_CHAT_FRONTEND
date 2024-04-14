@@ -12,6 +12,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
 import Replicate from "replicate";
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+import { initializeApp } from "firebase/app";
+import { getStorage, ref, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+import config from "./config/firebase.config"
+
 
 const app = express();
 const port = 4000;
@@ -23,6 +27,212 @@ app.get('/', async (req: Request, res: Response) => {
 });
 
 const { NEXT_NODE_MAILER_SECRET }: { NEXT_NODE_MAILER_SECRET?: string | undefined } = process.env as { NEXT_NODE_MAILER_SECRET?: string | undefined };
+
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+initializeApp(config.firebaseConfig);
+const storage = getStorage();
+const upload = multer({ storage: multer.memoryStorage() });
+
+const giveCurrentDateTime = () => {
+  const today = new Date();
+  const date = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+  const time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+  const dateTime = date + ' ' + time;
+  return dateTime;
+}
+
+
+app.post("/uploadAudio", upload.single("audio"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send('No file uploaded.');
+    }
+    const dateTime = giveCurrentDateTime();
+
+    const storageRef = ref(storage, `audio/${req.file.originalname + "       " + dateTime}`);
+
+    const metadata = {
+      contentType: req?.file.mimetype,
+    };
+
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+
+    const audioURL = await getDownloadURL(snapshot.ref);
+
+    const { roomId, sender, receiver } = req.body
+    await connect();
+    const currentUser = await SelectedUsers.findOne({ username: sender });
+    const receipentUser = await SelectedUsers.findOne({ username: receiver });
+
+    if (!currentUser || !receipentUser) {
+      console.log(2)
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let currentUserSelectedUser;
+    let receipentUserSelectedUser;
+    if ((currentUser as any).selectedUsers) {
+      console.log(3)
+      currentUserSelectedUser = (currentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
+
+    }
+    if ((receipentUser as any).selectedUsers) {
+      console.log(4)
+      receipentUserSelectedUser = (receipentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
+    }
+
+    if (!currentUserSelectedUser || !receipentUserSelectedUser) {
+      console.log(5, currentUserSelectedUser, receipentUserSelectedUser)
+      return res.status(404).json({ error: 'SelectedUser not found for the specified roomId' });
+    }
+
+    const chatObject = { audioURL: audioURL, isSender: true };
+    const receipentChatObject = { audioURL: audioURL, isSender: false };
+    currentUserSelectedUser.lastChatTime = new Date();
+    receipentUserSelectedUser.lastChatTime = new Date();
+    currentUserSelectedUser.chats.unshift(chatObject);
+    receipentUserSelectedUser.chats.unshift(receipentChatObject);
+
+    await currentUser.save();
+    await receipentUser.save();
+    console.log(6)
+
+    res.status(200).send({ audioURL });
+
+
+  } catch (error) {
+    console.log(error)
+  }
+});
+
+app.post('/groupUploadAudio', upload.single('audio'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send('No file uploaded.');
+    }
+    const dateTime = giveCurrentDateTime();
+
+    const storageRef = ref(storage, `groupAudioFiles/${req.file.originalname + " " + dateTime}`);
+
+    const metadata = {
+      contentType: req?.file.mimetype,
+    };
+
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+
+    const audioURL = await getDownloadURL(snapshot.ref);
+
+    const { roomId, profilePic, sender } = req.body;
+    const group = await Group.findOne({ roomId: roomId });
+    if (!group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    const chatObject = { audioURL: audioURL, profilePic: profilePic, sender: sender };
+    group.messages.unshift(chatObject);
+    await group.save();
+    res.status(200).send({ audioURL });
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/uploadProfilePic', upload.single('profilePic'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send('No file uploaded.');
+    }
+    const uniqueFileName = `${Date.now()}_${req.file.originalname}`;
+    // const filePath = path.join('public', 'images', 'profilePics', uniqueFileName);
+    const storageRef = ref(storage, `profilePics/${uniqueFileName}`);
+
+    const metadata = {
+      contentType: req?.file.mimetype,
+    };
+
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    console.log(downloadURL)
+
+    await connect();
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (req.file) {
+      user.profilePic = downloadURL;
+      await user.save();
+
+      const currentUserName = user.username;
+
+      const selectedUsers = await SelectedUsers.find({});
+      selectedUsers.forEach(async (selectedUser) => {
+        const user = selectedUser.selectedUsers.find(user => user.username === currentUserName);
+        if (user) {
+          user.profilePic = downloadURL;
+          await selectedUser.save();
+        }
+      });
+
+      const groups = await Group.find({});
+      groups.forEach(async (group) => {
+        const user = group.members.find(user => user.username === currentUserName);
+        if (user) {
+          user.profilePic = downloadURL;
+          await group.save();
+        }
+      });
+
+      
+
+    }
+
+
+  
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/uploadGroupProfilePic', upload.single('profilePic'), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send('No file uploaded.');
+    }
+    const uniqueFileName = `${Date.now()}_${req.file.originalname}`;
+    // const filePath = path.join('public', 'images', 'profilePics', uniqueFileName);
+    const storageRef = ref(storage, `groupProfilePics/${uniqueFileName}`);
+
+    const metadata = {
+      contentType: req?.file.mimetype,
+    };
+
+    const snapshot = await uploadBytesResumable(storageRef, req.file.buffer, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
+    if(req.file){
+      await connect()
+      const { groupName } = req.body;
+      const group = await Group.findOne({ groupName})
+      if (!group) {
+        return res.status(404).json({ error: 'Group not found' });
+      }
+      group.profilePic = downloadURL;
+      await group.save();
+    }
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 app.post('/register', async (req: Request, res: Response) => {
   let verificationCode: string = '';
@@ -101,7 +311,7 @@ app.post('/enterDetails', async (req: Request, res: Response) => {
     await connect()
 
     const hashedPassword = await bcrypt.hash(password, 5);
-    const user = new User({ email, password: hashedPassword, name, username, phoneno: phone, provider })
+    const user = new User({ email, password: hashedPassword, name, username, phoneno: phone, provider, profilePic: ""})
     await user.save();
 
     return res.status(200).json({ message: "User has been registered" });
@@ -276,139 +486,141 @@ app.post("/getGroupChats", async (req: Request, res: Response) => {
   } catch (e) { console.log(e) }
 })
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// app.use(express.static(path.join(__dirname, '..', 'public')));
 
 
-const uploadFile = multer({ dest: 'public/audio' });
+// // const uploadFile = multer({ dest: 'public/audio' });
 
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.post('/uploadAudio', uploadFile.single('audio'), async (req: Request, res: Response) => {
-  try {
-    const audioURL = `http://localhost:4000/audio/${req?.file?.filename}`;
-    const { roomId, sender, receiver } = req.body
-    console.log(1, roomId, sender, receiver)
-    await connect();
-    const currentUser = await SelectedUsers.findOne({ username: sender });
-    const receipentUser = await SelectedUsers.findOne({ username: receiver });
-
-    if (!currentUser || !receipentUser) {
-      console.log(2)
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    let currentUserSelectedUser;
-    let receipentUserSelectedUser;
-    if ((currentUser as any).selectedUsers) {
-      console.log(3)
-      currentUserSelectedUser = (currentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
-
-    }
-    if ((receipentUser as any).selectedUsers) {
-      console.log(4)
-      receipentUserSelectedUser = (receipentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
-    }
-
-    if (!currentUserSelectedUser || !receipentUserSelectedUser) {
-      console.log(5, currentUserSelectedUser, receipentUserSelectedUser)
-      return res.status(404).json({ error: 'SelectedUser not found for the specified roomId' });
-    }
-
-    const chatObject = { audioURL: audioURL, isSender: true };
-    const receipentChatObject = { audioURL: audioURL, isSender: false };
-    currentUserSelectedUser.lastChatTime = new Date();
-    receipentUserSelectedUser.lastChatTime = new Date();
-    currentUserSelectedUser.chats.unshift(chatObject);
-    receipentUserSelectedUser.chats.unshift(receipentChatObject);
-
-    await currentUser.save();
-    await receipentUser.save();
-    console.log(6)
-
-    res.status(200).send({ audioURL });
-  } catch (e) { console.log(e) }
-});
-
-app.post('/groupUploadAudio', uploadFile.single('audio'), async (req: Request, res: Response) => {
-  try {
-    const audioURL = `http://localhost:4000/audio/${req?.file?.filename}`;
-    const { roomId, profilePic, sender } = req.body
-    const group = await Group.findOne({ roomId: roomId });
-    if (!group) {
-      return res.status(404).json({ error: 'Group not found' });
-    }
-    const chatObject = { audioURL: audioURL, profilePic: profilePic, sender: sender };
-    group.messages.unshift(chatObject);
-    await group.save();
-    res.status(200).send({ audioURL });
-  } catch (e) {
-    console.log(e)
-  }
-})
-
-// Route to serve audio files
-app.get('/audio/:fileName', (req, res) => {
-  const fileName = req.params.fileName;
-  res.sendFile(path.join(__dirname, 'public', 'audio', fileName));
-});
+// app.use(express.static(path.join(__dirname, 'public')));
 
 
-app.get('/getprofilePic/:imagePath', async (req, res) => {
-  const { imagePath } = req.params;
-  const fullPath = path.join(__dirname, '..', 'public', 'images', 'profilePics', imagePath);
-  res.download(fullPath);
-});
+
+// app.post('/uploadAudio', uploadFile.single('audio'), async (req: Request, res: Response) => {
+//   try {
+//     const audioURL = `http://localhost:4000/audio/${req?.file?.filename}`;
+//     const { roomId, sender, receiver } = req.body
+//     console.log(1, roomId, sender, receiver)
+//     await connect();
+//     const currentUser = await SelectedUsers.findOne({ username: sender });
+//     const receipentUser = await SelectedUsers.findOne({ username: receiver });
+
+//     if (!currentUser || !receipentUser) {
+//       console.log(2)
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     let currentUserSelectedUser;
+//     let receipentUserSelectedUser;
+//     if ((currentUser as any).selectedUsers) {
+//       console.log(3)
+//       currentUserSelectedUser = (currentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
+
+//     }
+//     if ((receipentUser as any).selectedUsers) {
+//       console.log(4)
+//       receipentUserSelectedUser = (receipentUser as any)?.selectedUsers.find((user: any) => user.roomId == roomId);
+//     }
+
+//     if (!currentUserSelectedUser || !receipentUserSelectedUser) {
+//       console.log(5, currentUserSelectedUser, receipentUserSelectedUser)
+//       return res.status(404).json({ error: 'SelectedUser not found for the specified roomId' });
+//     }
+
+//     const chatObject = { audioURL: audioURL, isSender: true };
+//     const receipentChatObject = { audioURL: audioURL, isSender: false };
+//     currentUserSelectedUser.lastChatTime = new Date();
+//     receipentUserSelectedUser.lastChatTime = new Date();
+//     currentUserSelectedUser.chats.unshift(chatObject);
+//     receipentUserSelectedUser.chats.unshift(receipentChatObject);
+
+//     await currentUser.save();
+//     await receipentUser.save();
+//     console.log(6)
+
+//     res.status(200).send({ audioURL });
+//   } catch (e) { console.log(e) }
+// });
+
+// app.post('/groupUploadAudio', uploadFile.single('audio'), async (req: Request, res: Response) => {
+//   try {
+//     const audioURL = `http://localhost:4000/audio/${req?.file?.filename}`;
+//     const { roomId, profilePic, sender } = req.body
+//     const group = await Group.findOne({ roomId: roomId });
+//     if (!group) {
+//       return res.status(404).json({ error: 'Group not found' });
+//     }
+//     const chatObject = { audioURL: audioURL, profilePic: profilePic, sender: sender };
+//     group.messages.unshift(chatObject);
+//     await group.save();
+//     res.status(200).send({ audioURL });
+//   } catch (e) {
+//     console.log(e)
+//   }
+// })
+
+// // Route to serve audio files
+// app.get('/audio/:fileName', (req, res) => {
+//   const fileName = req.params.fileName;
+//   res.sendFile(path.join(__dirname, 'public', 'audio', fileName));
+// });
 
 
-const upload = multer({ dest: 'public/images/profilePics' });
+// app.get('/getprofilePic/:imagePath', async (req, res) => {
+//   const { imagePath } = req.params;
+//   const fullPath = path.join(__dirname, '..', 'public', 'images', 'profilePics', imagePath);
+//   res.download(fullPath);
+// });
 
-app.post('/uploadProfilePic', upload.single('profilePic'), async (req: Request, res: Response) => {
-  try {
-    await connect();
-    const { email } = req.body;
-    const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+// const upload = multer({ dest: 'public/images/profilePics' });
 
-    if (req.file) {
-      const uniqueFileName = `${Date.now()}_${req.file.originalname}`;
-      const filePath = path.join('public', 'images', 'profilePics', uniqueFileName);
-      user.profilePic = uniqueFileName;
-      await user.save();
-      await fs.promises.rename(req.file.path, filePath);
-    }
+// app.post('/uploadProfilePic', upload.single('profilePic'), async (req: Request, res: Response) => {
+//   try {
+//     await connect();
+//     const { email } = req.body;
+//     const user = await User.findOne({ email });
 
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+//     if (!user) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
 
-app.post('/uploadGroupProfilePic', upload.single('profilePic'), async (req: Request, res: Response) => {
-  try {
-    await connect();
-    // console.log(req.body, "req.body")
-    const { groupName } = req.body;
-    const group = await Group.findOne({ groupName });
-    if (!group) {
-      return res.status(404).json({ error: 'Group not found' });
-    }
-    if (req.file) {
-      const uniqueFileName = `${Date.now()}_${req.file.originalname}`;
-      const filePath = path.join('public', 'images', 'profilePics', uniqueFileName);
-      group.profilePic = uniqueFileName;
-      await group.save();
-      await fs.promises.rename(req.file.path, filePath);
-    }
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+//     if (req.file) {
+//       const uniqueFileName = `${Date.now()}_${req.file.originalname}`;
+//       const filePath = path.join('public', 'images', 'profilePics', uniqueFileName);
+//       user.profilePic = uniqueFileName;
+//       await user.save();
+//       await fs.promises.rename(req.file.path, filePath);
+//     }
+
+//     res.status(200).json({ success: true });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
+
+// app.post('/uploadGroupProfilePic', upload.single('profilePic'), async (req: Request, res: Response) => {
+//   try {
+//     await connect();
+//     // console.log(req.body, "req.body")
+//     const { groupName } = req.body;
+//     const group = await Group.findOne({ groupName });
+//     if (!group) {
+//       return res.status(404).json({ error: 'Group not found' });
+//     }
+//     if (req.file) {
+//       const uniqueFileName = `${Date.now()}_${req.file.originalname}`;
+//       const filePath = path.join('public', 'images', 'profilePics', uniqueFileName);
+//       group.profilePic = uniqueFileName;
+//       await group.save();
+//       await fs.promises.rename(req.file.path, filePath);
+//     }
+//     res.status(200).json({ success: true });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// });
 
 app.post("/getInitlaData", async (req: Request, res: Response) => {
   try {

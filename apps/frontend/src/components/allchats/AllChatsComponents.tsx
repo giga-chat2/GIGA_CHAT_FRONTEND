@@ -44,7 +44,7 @@ export const PopUpCover: React.FC = () => {
         if (session?.status === 'authenticated') {
             setEmailCookie('email', session?.data?.user?.email, { path: '/' })
         }
-        else if(session?.status === 'unauthenticated'){
+        else if (session?.status === 'unauthenticated') {
             window.location.href = '/pages/auth'
         }
     })
@@ -424,10 +424,25 @@ export const MainComponent: React.FC = () => {
                         console.log('receive_Message', 1)
                         if (data.sender === getCookieValue('currentSelectedUser')) {
                             setRecievedMessage('recievedMessage', data.message, { path: '/' })
-                        } else {
+                        }
+                        else if (selectedUser && selectedUser.some(user => user.username === data.sender)) {
                             console.log(seenPendingMessages, selectedUser)
                             setLastestReceived(data.sender)
                             setSeenPendingMessages((prevSeenPendingMessages) => { return { ...prevSeenPendingMessages, [data.sender]: prevSeenPendingMessages[data.sender] ? prevSeenPendingMessages[data.sender] + 1 : 1 } })
+                        }
+                        else {
+                            setLastestReceived(data.sender)
+                            setSeenPendingMessages((prevSeenPendingMessages) => { return { ...prevSeenPendingMessages, [data.sender]: prevSeenPendingMessages[data.sender] ? prevSeenPendingMessages[data.sender] + 1 : 1 } })
+                            if (selectedUser && selectedUser.length > 0) {
+                                try {
+                                    setSelectedUser((prevSelectedUser) => [results.find(user => user.username === data.sender), ...prevSelectedUser])
+                                } catch (e) { console.log(e) }
+                            } else {
+                                console.log(results)
+                                try {
+                                    setSelectedUser([results.find(user => user.username === data.sender)])
+                                } catch (e) { console.log(e) }
+                            }
                         }
                     }
                 })
@@ -554,7 +569,8 @@ export const MainComponent: React.FC = () => {
             }
             catch (e) {
                 try {
-                    openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
+                    console.log("error aaya")
+                    openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
                     const completion = await openai.chat.completions.create({
                         messages: [...openAiChats, { role: role, content: msg }],
                         model: "gpt-3.5-turbo",
@@ -594,31 +610,38 @@ export const MainComponent: React.FC = () => {
                 },
                 body: JSON.stringify({ email: emailCookie?.email })
             }).then(res => res.json()).then(data => {
-                setCurrentUserName(data.currentUser)
-                setAiAuggestions('aiSuggestions', data.currentUser?.aiSuggestions, { path: '/' })
+                console.log(data)
+                setCurrentUserName(data?.currentUser)
+                setAiAuggestions('aiSuggestions', data?.currentUser?.aiSuggestions, { path: '/' })
                 setDispStatus('dispStatus', data.currentUser?.dispStatus, { path: '/' })
-                const filteredData = data?.usernames.filter((item: any) => item.email !== emailCookie.email);
-                const selectedUsernames = data.selectedUsers.map((user: any) => user.username);
-                const finalFilteredData = filteredData.filter((item: any) => !selectedUsernames.includes(item.username));
+                const filteredData = data?.usernames?.filter((item: any) => item.email !== emailCookie.email);
+                const selectedUsernames = data?.selectedUsers?.map((user: any) => user.username);
+                const finalFilteredData = filteredData?.filter((item: any) => !selectedUsernames?.includes(item?.username));
                 setResults(finalFilteredData);
-                const array = filteredData.map((item: any) => item.username)
-                setSelectedUser(data.selectedUsers.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime)));
+                const array = filteredData?.map((item: any) => item?.username)
+                setSelectedUser(data?.selectedUsers?.sort((a, b) => new Date(b?.lastChatTime) - new Date(a?.lastChatTime)));
                 const updatedSeenPendingMessages = {};
-                data.selectedUsers.forEach(user => {
-                    if (user.pending && user.pending > 0) {
-                        updatedSeenPendingMessages[user.username] = user.pending;
+                data?.selectedUsers?.forEach(user => {
+                    if (user?.pending && user?.pending > 0) {
+                        updatedSeenPendingMessages[user?.username] = user?.pending;
                     }
                 });
                 setSeenPendingMessages(updatedSeenPendingMessages);
-                let arr = data.selectedUsers.sort((a, b) => new Date(b.lastChatTime) - new Date(a.lastChatTime))
-                setSelectedOnlineUsers(data.onlineUsers)
-                setProfilePicPath('profilePicPath', data?.currentUser?.profilePic, { path: '/' })
-                setCurrentUser('username', data.currentUser?.username, { path: '/' })
-                if (socket) {
-                    socket.emit('online', currentUser?.username)
-                    addToOnlineUsers(dispStatus.dispStatus, currentUser?.username)
+                let arr = data?.selectedUsers?.sort((a, b) => new Date(b?.lastChatTime) - new Date(a?.lastChatTime))
+                setSelectedOnlineUsers(data?.onlineUsers)
+                if (data?.currentUser?.profilePic) {
+                    setProfilePicPath('profilePicPath', data?.currentUser?.profilePic, { path: '/' })
                 }
-                handleUserClick(data.currentUser?.username, 0, arr[0]?.username)
+                setCurrentUser('username', data?.currentUser?.username, { path: '/' })
+                if (socket) {
+                    console.log("cammed")
+                    socket.emit('online', currentUser?.username)
+                    addToOnlineUsers(dispStatus?.dispStatus, currentUser?.username)
+                }
+                if (arr) {
+                    handleUserClick(data.currentUser?.username, 0, arr[0]?.username)
+                }
+                console.log(finalFilteredData)
             })
         } catch (e) {
             console.log(e)
@@ -967,294 +990,292 @@ export const MainComponent: React.FC = () => {
     return (
         <>
             {!mobileView.mobileView ? <>
-                {selectedUser && selectedUser.length > 0 ? <>
-                    <Drawer
-                        open={isOpen}
-                        onClose={() => setIsOpen(false)}
-                        direction='right'
-                        className='drawer'
-                        style={{ width: "25vw", backgroundColor: "#1e232c" }}
-                    >
-                        <div className='absolute top-0 right-0 w-[40px] h-[30px] cursor-pointer z-50 border border-white flex justify-center items-center ' onClick={() => setIsOpen(false)} ><CloseIcon style={{ width: "80%", height: "80%", color: "white", cursor: "pointer" }} /></div>
-                        <div className='w-[100%] h-[40%] relative border-b border-white flex justify-center items-center' >
-                            <div className='w-[200px] h-[200px] rounded-full border border-white overflow-hidden ' >
-                                {selectedUser && selectedUser[index]?.profilePic ? <><img
-                                    src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
-                                    alt="profile"
-                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                /></> : <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />}
+                <Drawer
+                    open={isOpen}
+                    onClose={() => setIsOpen(false)}
+                    direction='right'
+                    className='drawer'
+                    style={{ width: "25vw", backgroundColor: "#1e232c" }}
+                >
+                    <div className='absolute top-0 right-0 w-[40px] h-[30px] cursor-pointer z-50 border border-white flex justify-center items-center ' onClick={() => setIsOpen(false)} ><CloseIcon style={{ width: "80%", height: "80%", color: "white", cursor: "pointer" }} /></div>
+                    <div className='w-[100%] h-[40%] relative border-b border-white flex justify-center items-center' >
+                        <div className='w-[200px] h-[200px] rounded-full border border-white overflow-hidden ' >
+                            {selectedUser && selectedUser[index]?.profilePic ? <><img
+                                src={`${selectedUser[index]?.profilePic}`}
+                                alt="profile"
+                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            /></> : <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />}
+                        </div>
+                    </div>
+                    {selectedUser ? <>
+                        <div className='w-[100%] h-[20%] flex flex-col justify-center items-center '>
+                            <div className='w-[100%] h-[40%] flex  items-center' >
+                                <p className='text-white   ml-5 ' ><strong> Name : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.name}</p>
+                            </div>
+                            <div className='w-[100%] h-[40%] flex items-center' >
+                                <p className='text-white  ml-5 ' ><strong> Username : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.username}</p>
                             </div>
                         </div>
-                        {selectedUser ? <>
-                            <div className='w-[100%] h-[20%] flex flex-col justify-center items-center '>
-                                <div className='w-[100%] h-[40%] flex  items-center' >
-                                    <p className='text-white   ml-5 ' ><strong> Name : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.name}</p>
+                        <div className='w-[100%] h-[20%] flex flex-col justify-center items-center' >
+                            <div className='w-[100%] h-[20%] justify-center items-center border-y border-white text-center ' ><p className='text-white font-semibold ' > Get in touch</p>  </div>
+                            <div className='w-[100%] h-[80%] flex flex-col justify-center items-center'>
+                                <div className='w-[100%] h-[50%] flex justify-startitems-center mt-5'>
+                                    <p className='ml-5 text-white' ><strong>Email : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.email} </p>
                                 </div>
-                                <div className='w-[100%] h-[40%] flex items-center' >
-                                    <p className='text-white  ml-5 ' ><strong> Username : </strong></p><p className='ml-3 font-thin text-white ' >{selectedUser[index]?.username}</p>
-                                </div>
-                            </div>
-                            <div className='w-[100%] h-[20%] flex flex-col justify-center items-center' >
-                                <div className='w-[100%] h-[20%] justify-center items-center border-y border-white text-center ' ><p className='text-white font-semibold ' > Get in touch</p>  </div>
-                                <div className='w-[100%] h-[80%] flex flex-col justify-center items-center'>
-                                    <div className='w-[100%] h-[50%] flex justify-startitems-center mt-5'>
-                                        <p className='ml-5 text-white' ><strong>Email : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.email} </p>
-                                    </div>
-                                    <div className='w-[100%] h-[50%] flex justify-start   items-center' >
-                                        <p className='ml-5 text-white'><strong>Phone : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.phoneno} </p>
-                                    </div>
+                                <div className='w-[100%] h-[50%] flex justify-start   items-center' >
+                                    <p className='ml-5 text-white'><strong>Phone : </strong></p><p className='ml-3 font-thin text-white' >{selectedUser[index]?.phoneno} </p>
                                 </div>
                             </div>
-                            <div className='w-[100%] h-[20%] flex flex-col justify-center items-center border-t border-white ' >
-                                <div className='w-[100%] h-[50%] flex justify-start items-center' >
-                                    <p className='ml-5 text-white'><strong>Joined GIGA-CHAT on : </strong></p><p className='ml-3 font-thin text-white' >{new Date(selectedUser[index]?.createdAt).getDate()}/{new Date(selectedUser[index]?.createdAt).getMonth() + 1}/{new Date(selectedUser[index]?.createdAt).getFullYear()} </p>
-                                </div>
+                        </div>
+                        <div className='w-[100%] h-[20%] flex flex-col justify-center items-center border-t border-white ' >
+                            <div className='w-[100%] h-[50%] flex justify-start items-center' >
+                                <p className='ml-5 text-white'><strong>Joined GIGA-CHAT on : </strong></p><p className='ml-3 font-thin text-white' >{new Date(selectedUser[index]?.createdAt).getDate()}/{new Date(selectedUser[index]?.createdAt).getMonth() + 1}/{new Date(selectedUser[index]?.createdAt).getFullYear()} </p>
                             </div>
-                        </> : <></>}
+                        </div>
+                    </> : <></>}
 
-                    </Drawer>
-                    {contextMenu.show && <div className={`absolute z-50 bg-black border border-white w-[200px] h-[150px] flex flex-col justify-center items-center rounded-md`} ref={contextMenuRef} onClick={handleContextMenuClose} style={{ top: contextMenu.y, left: contextMenu.x }} >
-                        <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-b border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={() => setIsOpen(true)} >
-                            <PersonRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
-                            <p className='ml-3 text'>View Profile</p>
-                        </div>
-                        <div className={`w-[100%] h-[34%] flex justify-start cursor-pointer items-center border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserDelete} >
-                            <DeleteIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
-                            <p className='ml-3 text' >Delete User</p>
-                        </div>
-                        <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-t border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserArchive} >
-                            <ArchiveRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
-                            <p className='ml-3 text'>Archive User</p>
-                        </div>
+                </Drawer>
+                {contextMenu.show && <div className={`absolute z-50 bg-black border border-white w-[200px] h-[150px] flex flex-col justify-center items-center rounded-md`} ref={contextMenuRef} onClick={handleContextMenuClose} style={{ top: contextMenu.y, left: contextMenu.x }} >
+                    <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-b border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={() => setIsOpen(true)} >
+                        <PersonRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
+                        <p className='ml-3 text'>View Profile</p>
+                    </div>
+                    <div className={`w-[100%] h-[34%] flex justify-start cursor-pointer items-center border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserDelete} >
+                        <DeleteIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
+                        <p className='ml-3 text' >Delete User</p>
+                    </div>
+                    <div className={`w-[100%] h-[33%] flex  justify-start cursor-pointer items-center border-t border-white text-white `} onMouseEnter={handleHover} onMouseLeave={handleMouseLeave} onClick={handleUserArchive} >
+                        <ArchiveRoundedIcon sx={{ color: "white", width: "20%", height: "50%" }} className='icon' />
+                        <p className='ml-3 text'>Archive User</p>
+                    </div>
 
-                    </div>}
-                    <div className='w-[85vw] h-screen flex flex-row overflow-x-hidden overflow-y-hidden'>
-                        <div className='w-[20vw] min-w-[20vw] h-[100%] relative '>
-                            <div className='w-[100%] h-[90%] relative'>
-                                <div className='w-[100%] h-[7%] mt-6 flex justify-center items-center  p-1'>
-                                    <ForumIcon sx={{ color: "#fff", width: "20%", height: "70%", padding: "0", marginBottom: "1%" }} />
-                                    <p className='w-[100%] h-[90%] text-xl font-semibold text-white ' >All Chats</p>
-                                </div>
-                                <div className='w-[100%] h-[7%] flex justify-center items-center p-1'>
-                                    <input
-                                        type="text"
-                                        placeholder='Search your contact...'
-                                        className='w-[100%] h-[100%] text-center rounded bg-[#1e232c] text-white border border-none focus:border-none outline-none '
-                                        value={searchTerm}
-                                        onChange={handleSearch}
-                                    />
-                                </div>
-                                <div className='w-[100%]  h-[100%] overflow-y-scroll searchResults '>
-                                    {displaySearchResults ? <>
-                                        <div className=' flex flex-col items-center w-[100%] h-[fit-content]  border-b border-white relative z-10'>
-                                            {searchResults.length > 0 && searchResults.map((result, index) => (
-                                                <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onClick={() => handleSearchResultClicked(result)} >
-                                                    <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
-                                                        <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
-                                                            {result?.profilePic ? <><img
-                                                                src={`http://localhost:4000/getprofilePic/${result?.profilePic}`}
-                                                                alt="profile"
-                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                            /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+                </div>}
+                <div className='w-[85vw] h-screen flex flex-row overflow-x-hidden overflow-y-hidden'>
+                    <div className='w-[20vw] min-w-[20vw] h-[100%] relative '>
+                        <div className='w-[100%] h-[90%] relative'>
+                            <div className='w-[100%] h-[7%] mt-6 flex justify-center items-center  p-1'>
+                                <ForumIcon sx={{ color: "#fff", width: "20%", height: "70%", padding: "0", marginBottom: "1%" }} />
+                                <p className='w-[100%] h-[90%] text-xl font-semibold text-white ' >All Chats</p>
+                            </div>
+                            <div className='w-[100%] h-[7%] flex justify-center items-center p-1'>
+                                <input
+                                    type="text"
+                                    placeholder='Search your contact...'
+                                    className='w-[100%] h-[100%] text-center rounded bg-[#1e232c] text-white border border-none focus:border-none outline-none '
+                                    value={searchTerm}
+                                    onChange={handleSearch}
+                                />
+                            </div>
+                            <div className='w-[100%]  h-[100%] overflow-y-scroll searchResults '>
+                                {displaySearchResults ? <>
+                                    <div className=' flex flex-col items-center w-[100%] h-[fit-content]  border-b border-white relative z-10'>
+                                        {searchResults.length > 0 && searchResults.map((result, index) => (
+                                            <div className='w-[98%] h-[70px] flex border-none mb-3 rounded-sm cursor-pointer  bg-[#1e232c] hover:bg-[#3d3c3c] ' onClick={() => handleSearchResultClicked(result)} >
+                                                <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                                    <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                        {result?.profilePic ? <><img
+                                                            src={`${result?.profilePic}`}
+                                                            alt="profile"
+                                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                        /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
 
-                                                        </div>
-                                                    </div>
-                                                    <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
-                                                        <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{result.username}</p>
-                                                        <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.name}</p>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </> : <>
+                                                <div className='relative w-[70%] h-[100%] border-none text-white rounded-e-sm '>
+                                                    <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={index}>{result.username}</p>
+                                                    <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={index}>{result.name}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </> : <>
 
+                                </>}
+                                <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
+                                    {selectedUser && selectedUser.length > 0 ? selectedUser?.map((user, idx) => (
+                                        <div className={`w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer user-list-item  mb-3 rounded-sm ${animationTarget === user.username ? 'move-up-animation' : ''} `} onContextMenu={handleContextMenu} onClick={() => handleUserClick(null, idx, user?.username)} >
+                                            <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
+                                                <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
+                                                    <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
+                                                        {user?.profilePic ? <><img
+                                                            src={`${user?.profilePic}`}
+                                                            alt="profile"
+                                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                        /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+
+                                                    </div>
+                                                </div>
+                                                <div className='relative w-[50%] h-[100%] border-none text-white rounded-e-sm '>
+                                                    <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={idx}>{user?.username}</p>
+                                                    <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={idx}>{user?.name}</p>
+                                                </div>
+                                                <div className='relative w-[20%] h-[100%] flex justify-center items-center text-white rounded-e-sm '>
+                                                    {seenPendingMessages[user?.username] && seenPendingMessages[user?.username] > 0 ? <>
+                                                        <div className='w-[50%] h-[100%]  flex justify-center items-center ' ><p className='w-[20px] h-[20px] rounded-full text-[#3d3c3c] bg-white font-semibold  flex justify-center items-center ' >{seenPendingMessages[user?.username]}</p></div>
+                                                    </> : <>
+                                                        <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
+                                                    </>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : <>
+                                        <div className='w-[80%] flex justify-center items-center text-white h-[20%] clickHereAnimation1 ' >
+                                            <StraightIcon sx={{ color: "white", width: "30%", height: "80%" }} /> Click here to search your contacts
+                                        </div>
                                     </>}
-                                    <div className='flex flex-col items-center relative z-10 mt-1 h-[95%] overflow-y-scroll' >
-                                        {selectedUser && selectedUser.length > 0 ? selectedUser?.map((user, idx) => (
-                                            <div className={`w-[98%] h-[70px] bg-[#3d3c3c] border-none cursor-pointer user-list-item  mb-3 rounded-sm ${animationTarget === user.username ? 'move-up-animation' : ''} `} onContextMenu={handleContextMenu} onClick={() => handleUserClick(null, idx, user?.username)} >
-                                                <div className={`w-[100%] h-[100%] flex border-none mb-3 rounded-sm   bg-[${userClicked === idx ? '#3d3c3c' : '#1e232c'}] hover:bg-[#3d3c3c]`}>
-                                                    <div className='relative w-[30%] h-[100%] flex justify-center items-center border-none'>
-                                                        <div className='relative w-[65px] h-[65px] border border-white overflow-hidden rounded-full flex flex-center items-center justify-center' >
-                                                            {user?.profilePic ? <><img
-                                                                src={`http://localhost:4000/getprofilePic/${user?.profilePic}`}
-                                                                alt="profile"
-                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                            /></> : <PersonIcon sx={{ color: "white", width: "70%", height: "70%" }} />}
+                                </div>
+                            </div>
 
-                                                        </div>
-                                                    </div>
-                                                    <div className='relative w-[50%] h-[100%] border-none text-white rounded-e-sm '>
-                                                        <p className=' border-none items-center w-[100%] h-[60%]  rounded-e-2xl pt-2 ml-2 mx-auto font-bold text-lg' key={idx}>{user?.username}</p>
-                                                        <p className="italic border-none items-center w-[100%] h-[40%]  rounded-e-2xl  ml-2 mx-auto" key={idx}>{user?.name}</p>
-                                                    </div>
-                                                    <div className='relative w-[20%] h-[100%] flex justify-center items-center text-white rounded-e-sm '>
-                                                        {seenPendingMessages[user?.username] && seenPendingMessages[user?.username] > 0 ? <>
-                                                            <div className='w-[50%] h-[100%]  flex justify-center items-center ' ><p className='w-[20px] h-[20px] rounded-full text-[#3d3c3c] bg-white font-semibold  flex justify-center items-center ' >{seenPendingMessages[user?.username]}</p></div>
-                                                        </> : <>
-                                                            <div className={`w-[10px] h-[10px] rounded-full ${selectedOnlineUsers.includes(user?.username) ? 'bg-green-300' : 'bg-red-300'} `} ></div>
-                                                        </>}
-                                                    </div>
+                        </div>
+                    </div>
+                    {selectedUser && selectedUser.length > 0 ?
+                        <>
+                            <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
+                                <div className='flex flex-col justify-center items-center w-[100%] h-[85%] relative'>
+                                    <div className='flex justify-center items-center w-[100%] h-[15%]  ' >
+                                        <div className=' flex w-[90%] h-[80%] border border-[#1e232c] rounded ' >
+                                            <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
+                                                <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
+                                                    {selectedUser[index]?.profilePic ? <>
+                                                        <img
+                                                            src={`${selectedUser[index]?.profilePic}`}
+                                                            alt="profile"
+                                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                        />
+                                                    </> : <>
+                                                        <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />
+                                                    </>}
                                                 </div>
                                             </div>
-                                        )) : <>
-                                            <div className='w-[80%] flex justify-center items-center text-white h-[20%] clickHereAnimation1 ' >
-                                                <StraightIcon sx={{ color: "white", width: "30%", height: "80%" }} /> Click here to search your contacts
+                                            <div className='w-[15%] h-[100%]  flex flex-col justify-center items-center ' >
+                                                <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                                    <p className='w-[100%] h-[100%] flex justify-start items-center text-center text-white font-bold text-xl mt-3 ' >{selectedUser[index]?.username}</p>
+                                                </div>
+                                                <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
+                                                    <p className='w-[100%] h-[100%] flex justify-start items-center text-center  text-white font-thin text-sm italic ' >
+                                                        {selectedOnlineUsers.includes(selectedUser[index]?.username) ? 'Online' : 'Offline'}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </>}
+                                            <div className='w-[10%] flex justify-center items-center h-[100%]  ml-auto ' >
+                                                <MoreVertIcon sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                    <div className='relative flex flex-col-reverse w-[90%] h-[85%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
+
+                                        {messages && messages.length > 0 && messages.map((msg, idx) => (
+                                            <div key={idx} className={`w-[450px] mb-20 border-none h-[150px] flex mt-2 ${msg.isSender ? 'ml-auto sender' : ''}`}>
+                                                {msg.isSender ? (
+                                                    <>
+                                                        <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0 ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble1 right1' : 'bg-[#1e232c] rounded-e bubble1 left1'} text-white flex flex-col`}>
+                                                            {msg.audioURL ? (
+                                                                <audio controls src={msg.audioURL} id={idx} >
+                                                                    <source src={msg.audioURL} />
+                                                                    Your browser does not support the audio element.
+                                                                </audio>
+                                                            ) : (
+                                                                <>
+                                                                    {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                                        <>
+                                                                            {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                                            <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>{msg.message}</>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex justify-end'>
+                                                            {profilePicPath.profilePicPath !== "undefined" ? (
+                                                                <img
+                                                                    src={`${profilePicPath.profilePicPath}`}
+                                                                    alt="profile"
+                                                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                                                />
+                                                            ) : (
+                                                                <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {handleSelectedUserClicked ? (
+                                                            <>
+                                                                <div className='rounded-full border-none flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto]'>
+                                                                    {selectedUser && selectedUser[index]?.profilePic ? (
+                                                                        <img
+                                                                            src={`${selectedUser[index]?.profilePic}`}
+                                                                            alt="profile"
+                                                                            style={{ width: "100%", marginTop: "auto", height: "100%", objectFit: "cover" }}
+                                                                        />
+                                                                    ) : (
+                                                                        <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
+                                                                    )}
+                                                                </div>
+                                                                <div className={`w-[fit-content] h-[fit-content] mt-2 font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble1 right1' : 'bg-[#1e232c] rounded-e bubble1 left1'} text-white p-[1.5%] flex font-semibold`}>
+                                                                    {msg.audioURL ? (
+                                                                        <audio src={msg.audioURL} controls>
+                                                                            <source src={msg.audioURL} type="audio/wav" />
+                                                                            Your browser does not support the audio element.
+                                                                        </audio>
+                                                                    ) : (
+                                                                        <>
+                                                                            {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                                                <>
+                                                                                    {msg.message.split('http://localhost:3000/pages/room/')[0]}
+                                                                                    <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                                                </>
+                                                                            ) : (
+                                                                                <>{msg.message}</>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <></>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+
+
+
                                     </div>
                                 </div>
+                                <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
 
-                            </div>
-                        </div>
-                        {selectedUser && selectedUser.length > 0 ?
-                            <>
-                                <div className={`flex flex-col w-[100%] h-screen justify-center items-center ${isChatWindowVisible === null ? 'hidden' : isChatWindowVisible ? 'chat-window' : 'chat-window-hidden'} `} >
-                                    <div className='flex flex-col justify-center items-center w-[100%] h-[85%] relative'>
-                                        <div className='flex justify-center items-center w-[100%] h-[15%]  ' >
-                                            <div className=' flex w-[90%] h-[80%] border border-[#1e232c] rounded ' >
-                                                <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
-                                                    <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
-                                                        {selectedUser[index]?.profilePic ? <>
-                                                            <img
-                                                                src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
-                                                                alt="profile"
-                                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                            />
-                                                        </> : <>
-                                                            <PersonIcon sx={{ color: "white", width: "100%", height: "100%" }} />
-                                                        </>}
-                                                    </div>
-                                                </div>
-                                                <div className='w-[15%] h-[100%]  flex flex-col justify-center items-center ' >
-                                                    <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
-                                                        <p className='w-[100%] h-[100%] flex justify-start items-center text-center text-white font-bold text-xl mt-3 ' >{selectedUser[index]?.username}</p>
-                                                    </div>
-                                                    <div className='w-[100%] h-[50%] flex justify-center items-center text-center ' >
-                                                        <p className='w-[100%] h-[100%] flex justify-start items-center text-center  text-white font-thin text-sm italic ' >
-                                                            {selectedOnlineUsers.includes(selectedUser[index]?.username) ? 'Online' : 'Offline'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className='w-[10%] flex justify-center items-center h-[100%]  ml-auto ' >
-                                                    <MoreVertIcon sx={{ padding: "0px", width: "30%", cursor: "pointer", height: "90%", color: "white" }} onClick={handleContextMenu} />
-                                                </div>
-
-                                            </div>
-                                        </div>
-                                        <div className='relative flex flex-col-reverse w-[90%] h-[85%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
-
-                                            {messages && messages.length > 0 && messages.map((msg, idx) => (
-                                                <div key={idx} className={`w-[450px] mb-20 border-none h-[150px] flex mt-2 ${msg.isSender ? 'ml-auto sender' : ''}`}>
-                                                    {msg.isSender ? (
-                                                        <>
-                                                            <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0 ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble1 right1' : 'bg-[#1e232c] rounded-e bubble1 left1'} text-white flex flex-col`}>
-                                                                {msg.audioURL ? (
-                                                                    <audio controls src={msg.audioURL} id={idx} >
-                                                                        <source src={msg.audioURL} />
-                                                                        Your browser does not support the audio element.
-                                                                    </audio>
-                                                                ) : (
-                                                                    <>
-                                                                        {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
-                                                                            <>
-                                                                                {msg.message.split('http://localhost:3000/pages/room/')[0]}
-                                                                                <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
-                                                                            </>
-                                                                        ) : (
-                                                                            <>{msg.message}</>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                            <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex justify-end'>
-                                                                {profilePicPath.profilePicPath !== "undefined" ? (
-                                                                    <img
-                                                                        src={`http://localhost:4000/getprofilePic/${profilePicPath.profilePicPath}`}
-                                                                        alt="profile"
-                                                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                                                    />
-                                                                ) : (
-                                                                    <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
-                                                                )}
-                                                            </div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {handleSelectedUserClicked ? (
-                                                                <>
-                                                                    <div className='rounded-full border-none flex items-center justify-center w-[40px] h-[40px] overflow-hidden mt-[auto]'>
-                                                                        {selectedUser && selectedUser[index]?.profilePic ? (
-                                                                            <img
-                                                                                src={`http://localhost:4000/getprofilePic/${selectedUser[index]?.profilePic}`}
-                                                                                alt="profile"
-                                                                                style={{ width: "100%", marginTop: "auto", height: "100%", objectFit: "cover" }}
-                                                                            />
-                                                                        ) : (
-                                                                            <PersonIcon sx={{ border: "1px solid white", borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
-                                                                        )}
-                                                                    </div>
-                                                                    <div className={`w-[fit-content] h-[fit-content] mt-2 font-thin text-sm mb-2 border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble1 right1' : 'bg-[#1e232c] rounded-e bubble1 left1'} text-white p-[1.5%] flex font-semibold`}>
-                                                                        {msg.audioURL ? (
-                                                                            <audio src={msg.audioURL} controls>
-                                                                                <source src={msg.audioURL} type="audio/wav" />
-                                                                                Your browser does not support the audio element.
-                                                                            </audio>
-                                                                        ) : (
-                                                                            <>
-                                                                                {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
-                                                                                    <>
-                                                                                        {msg.message.split('http://localhost:3000/pages/room/')[0]}
-                                                                                        <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
-                                                                                    </>
-                                                                                ) : (
-                                                                                    <>{msg.message}</>
-                                                                                )}
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </>
-                                                            ) : (
-                                                                <></>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            ))}
-
-
-
-                                        </div>
+                                    <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
+                                        <form onSubmit={onChatSubmit} className='submit-chat-form' >
+                                            <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
+                                            <input type="submit" className='hidden w-[0%] h-[0%]' />
+                                        </form>
                                     </div>
-                                    <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
-
-                                        <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
-                                            <form onSubmit={onChatSubmit} className='submit-chat-form' >
-                                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
-                                                <input type="submit" className='hidden w-[0%] h-[0%]' />
-                                            </form>
-                                        </div>
-                                        <div className='w-[10%] h-[100%] flex justify-center items-center' >
-                                            <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
-                                                {/* <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRecording} onMouseUp={stopRecordingAndSend}>
+                                    <div className='w-[10%] h-[100%] flex justify-center items-center' >
+                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
+                                            {/* <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRecording} onMouseUp={stopRecordingAndSend}>
                                                 {isMediaRecorderReady ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
                                             </div> */}
-                                                <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
-                                                    {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
-                                                </div>
+                                            <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
+                                                {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
                                             </div>
                                         </div>
                                     </div>
-
                                 </div>
-                            </> : <>
-                                <div className='flex flex-col w-[100%] h-screen  justify-center items-center ' >
-                                    <img src="/images/no_users_found.png" className='w-[70%] h-[85%]  ' alt="" />
 
-                                </div>
-                            </>}
+                            </div>
+                        </> : <>
+                            <div className='flex flex-col w-[100%] h-screen  justify-center items-center ' >
+                                <img src="/images/no_users_found.png" className='w-[70%] h-[85%]  ' alt="" />
 
-                    </div>
-                </> : <></>}
+                            </div>
+                        </>}
+
+                </div>
             </> : <>
                 <div className='w-[100%] h-[90%] flex flex-col justify-center items-center ' >
                     <div className='w-[100%] h-[5%] flex justify-center items-center ' >
