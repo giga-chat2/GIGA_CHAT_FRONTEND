@@ -32,7 +32,7 @@ export const VideoCallMainComponent: React.FC = () => {
     },[])
 
 
-    const socket = io('http://localhost:5000')
+    const socket = io('https://giga-chat-socket.onrender.com')
     const [meetings, setMeetings] = useState<object[]>([])
     const fetchMeetings = async () => {
         try {
@@ -220,8 +220,11 @@ export const VideoCallMainComponent: React.FC = () => {
     )
 }
 
+interface IMyProps {
+    userName: string,
+}
 
-export const RoomComponent: React.FC = ({ userName }) => {
+export const RoomComponent: React.FC<IMyProps> = ({ userName }) => {
     const params = useParams<{ tag: string; item: string }>()
     const [meetingId, setMeetingId] = useState<string>('')
 
