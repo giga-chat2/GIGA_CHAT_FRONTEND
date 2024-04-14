@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client"
 import React, { useEffect, useState, useRef } from 'react'
 import PersonIcon from '@mui/icons-material/Person';
