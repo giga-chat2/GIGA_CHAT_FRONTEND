@@ -102,13 +102,12 @@ export const MainComponent:React.FC<RoomComponentProps> = ({ roomId, username })
     }, [voiceNote])
 
     const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
-    var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
 
     const handleAiSuggestion = async (role: string, msg: string) => {
         if (aiSuggestions.aiSuggestions) {
             try {
-
-                const completion = await openai.chat.completions.create({
+                var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
+                const completion = await openai.chat.completions?.create({
                     messages: [...openAiChats, { role: role, content: msg }],
                     model: "gpt-3.5-turbo",
                 });
