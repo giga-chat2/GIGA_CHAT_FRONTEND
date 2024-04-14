@@ -46,6 +46,8 @@ interface RoomComponentProps {
     username: string,
     roomId: string
 }
+import { ChatCompletionMessageParam } from 'openai';
+
 
 export const MainComponent:React.FC<RoomComponentProps> = ({ roomId, username }) => {
     const [currentUser, setCurrentUser] = useCookies(['username'])
@@ -103,33 +105,33 @@ export const MainComponent:React.FC<RoomComponentProps> = ({ roomId, username })
 
     const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
 
-    const handleAiSuggestion = async (role: string, msg: string) => {
+    const handleAiSuggestion = async (role: "assistant" | "user", msg: string) => {
         if (aiSuggestions.aiSuggestions) {
-            try {
-                var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
-                const completion = await openai.chat.completions?.create({
-                    messages: [...openAiChats, { role: role, content: msg }],
-                    model: "gpt-3.5-turbo",
-                });
-                setPlaceholderVal(completion?.choices[0]?.message?.content)
-            }
-            catch (e) {
-                try {
-                    var openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
-                    const completion = await openai.chat.completions.create({
-                        messages: [...openAiChats, { role: role, content: msg }],
-                        model: "gpt-3.5-turbo",
-                    });
-                    setPlaceholderVal(completion.choices[0].message.content)
-                } catch (e) {
-                    console.log(e)
-                }
-            }
-        } else {
-            setPlaceholderVal('Enter your message and hit "Enter"')
-        }
-    }
 
+        try {
+            var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
+            const completion = await openai.chat.completions?.create({
+                messages: [...openAiChats, { role: role, content: msg } as ChatCompletionMessageParam],
+                model: "gpt-3.5-turbo",
+            });
+            setPlaceholderVal(completion?.choices[0]?.message?.content || '')
+        }
+          catch (e) {
+            try {
+              var openai = new OpenAI({ apiKey: process.env.NEXT_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
+              const completion = await openai.chat.completions.create({
+                messages: [...openAiChats, { role: role, content: msg } as ChatCompletionMessageParam],
+                model: "gpt-3.5-turbo",
+              });
+              setPlaceholderVal(completion?.choices[0]?.message?.content || '')
+            } catch (e) {
+              console.log(e)
+            }
+          }
+        } else {
+          setPlaceholderVal('Enter your message and hit "Enter"')
+        }
+      }
 
     useEffect(() => {
         if (firstTimeLoaded) {
