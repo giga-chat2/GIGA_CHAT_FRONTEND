@@ -9,6 +9,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import { io } from 'socket.io-client';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import OpenAI from "openai";
+import ChatCompletionMessageParam  from 'openai';
+
 
 function getCookieValue(cookieName: string) {
     const cookies = document.cookie.split(';');
@@ -46,7 +48,6 @@ interface RoomComponentProps {
     username: string,
     roomId: string
 }
-import { ChatCompletionMessageParam } from 'openai';
 
 
 export const MainComponent:React.FC<RoomComponentProps> = ({ roomId, username }) => {
