@@ -31,7 +31,8 @@ import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
 import AddReactionIcon from '@mui/icons-material/AddReaction';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useSession } from 'next-auth/react';
-
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import FileOpenIcon from '@mui/icons-material/FileOpen';
 
 type Event = MouseEvent | TouchEvent;
 
@@ -59,7 +60,7 @@ export const useClickOutside = <T extends HTMLElement = HTMLElement>(
 };
 
 
-const socket = io('https://giga-chat-socket-7.onrender.com')
+const socket = io('https://giga-chat-socket.onrender.com')
 
 function getCookieValue(cookieName: string) {
     const cookies = document.cookie.split(';');
@@ -107,15 +108,16 @@ export const MainComponent: React.FC = () => {
     const [roomID, setRoomID] = useCookies(['roomID'])
     const [currentGroupName, setCurrentGroupName] = useCookies(['currentGroupName'])
     const session = useSession()
+    const [fileReceived, setFileReceived] = useState<any>()
 
     useEffect(() => {
         if (session?.status === 'authenticated') {
             setEmailCookie('email', session?.data?.user?.email, { path: '/' })
         }
-        else if(session?.status === 'unauthenticated'){
+        else if (session?.status === 'unauthenticated') {
             window.location.href = '/pages/auth'
         }
-    },[])
+    }, [])
 
 
 
@@ -156,9 +158,15 @@ export const MainComponent: React.FC = () => {
 
             socket.on('receive_voice_message', (data) => {
                 if (data.groupName === getCookieValue('currentGroupName')) {
-                    setSender(data.sender)
-                    setSenderProfilePic(data.profilePic)
-                    setVoiceNote(data.audioURL)
+                    if (data.audioURL) {
+                        setSender(data.sender)
+                        setSenderProfilePic(data.profilePic)
+                        setVoiceNote(data.audioURL)
+                    } else if (data.fileURL) {
+                        setSender(data.sender)
+                        setSenderProfilePic(data.profilePic)
+                        setFileReceived(data.fileURL)
+                    }
                 }
             })
 
@@ -179,9 +187,23 @@ export const MainComponent: React.FC = () => {
 
     useEffect(() => {
         if (voiceNote) {
-            setMessages((prevMessages) => [{ audioURL: voiceNote, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
+            if (messages && messages.length > 0) {
+                setMessages((prevMessages) => [{ audioURL: voiceNote, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
+            } else {
+                setMessages([{ audioURL: voiceNote, sender: sender, profilePic: senderProfilePic }])
+            }
         }
     }, [voiceNote])
+
+    useEffect(() => {
+        if (fileReceived) {
+            if (messages && messages.length > 0) {
+                setMessages((prevMessages) => [{ fileURL: fileReceived, sender: sender, profilePic: senderProfilePic }, ...prevMessages])
+            } else {
+                setMessages([{ fileURL: fileReceived, sender: sender, profilePic: senderProfilePic }])
+            }
+        }
+    }, [fileReceived])
 
     var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
 
@@ -430,7 +452,7 @@ export const MainComponent: React.FC = () => {
     const handleContextMenu = (e: React.MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => {
         e.preventDefault()
         const { pageX, pageY } = e
-        setContextMenu({ show: true, x: pageX - 150, y: pageY+30 })
+        setContextMenu({ show: true, x: pageX - 150, y: pageY + 30 })
     }
 
     const handleContextMenuClose = () => {
@@ -631,7 +653,62 @@ export const MainComponent: React.FC = () => {
         } catch (e) { console.log(e) }
     }
 
+    const uploadFile = async (file: File) => {
+        try {
+            console.log(1)
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('roomId', roomId);
+            formData.append('sender', currentUser.username);
+            formData.append('profilePic', profilePicPath?.profilePicPath);
 
+            console.log(2)
+
+            const response = await axios.post('https://giga-chat-2-backend.vercel.app/groupUploadFile', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            console.log(3)
+
+            const data = response.data;
+            const fileURL = data.fileURL;
+            setMessages((prevMessages) => [{ fileURL: fileURL, sender: currentUser?.username }, ...prevMessages])
+            if (socket) {
+                socket.emit('voice_message', { fileURL: fileURL, groupName: selectedGroups[idx].groupName, profilePic: profilePicPath?.profilePicPath, user: currentUserName?.username })
+            }
+
+
+
+            console.log('File uploaded successfully', response.data);
+        } catch (error) {
+            console.error('Error uploading file', error);
+        }
+    };
+
+    const fileInputHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            uploadFile(file);
+        }
+    };
+
+    const urlToName = (url) => {
+        const parts = url.split('/');
+        const lastPart = parts[parts.length - 1];
+        const encodedFileName = lastPart.split('%2F')[1];
+        const decodedFileName = decodeURIComponent(encodedFileName);
+        
+        let trimmedFileName = decodedFileName.split('.pdf')[0] + '.pdf';
+        
+        if (trimmedFileName.length > 14) {
+            trimmedFileName = trimmedFileName.substring(0, 14) + '...';
+        }
+        
+        return trimmedFileName;
+    }
+    
 
 
     return (
@@ -967,12 +1044,21 @@ export const MainComponent: React.FC = () => {
                                                         <source src={msg.audioURL} />
                                                         Your browser does not support the audio element.
                                                     </audio>
+                                                ) : msg.fileURL ? (
+                                                    <div className='w-[200px] h-[50px] flex cursor-pointer ' onClick={() => window.open(msg.fileURL, '_blank')} >
+                                                        <div className='w-[20%] h-[100%] flex justify-center items-center ' >
+                                                            <FileOpenIcon sx={{ width: "80%", height: "80%", padding: "0px", color: "white" }} />
+                                                        </div>
+                                                        <div className='w-[80%] h-[100%] flex justify-start items-center text-sm p-2 ' >
+                                                            {urlToName(msg.fileURL)}
+                                                        </div>
+                                                    </div>
                                                 ) : (<>
                                                     {msg.message}
                                                 </>)}
                                             </div>
                                             <div className='rounded-full border border-white w-[40px] h-[40px] mt-auto flex justify-center items-center overflow-hidden ' >
-                                                {profilePicPath.profilePicPath && profilePicPath.profilePicPath  !== "undefined" ? <> <img src={`${profilePicPath.profilePicPath}`} alt="" /> </> : <>
+                                                {profilePicPath.profilePicPath && profilePicPath.profilePicPath !== "undefined" ? <> <img src={`${profilePicPath.profilePicPath}`} alt="" /> </> : <>
                                                     <PersonIcon sx={{ borderRadius: "50px", color: "white", width: "35px", height: "35px" }} />
                                                 </>}
                                             </div>
@@ -988,6 +1074,15 @@ export const MainComponent: React.FC = () => {
                                                         <source src={msg.audioURL} type="audio/wav" />
                                                         Your browser does not support the audio element.
                                                     </audio>
+                                                ) : msg.fileURL ? (
+                                                    <div className='w-[200px] h-[50px] flex cursor-pointer ' onClick={() => window.open(msg.fileURL, '_blank')} >
+                                                        <div className='w-[20%] h-[100%] flex justify-center items-center ' >
+                                                            <FileOpenIcon sx={{ width: "80%", height: "80%", padding: "0px", color: "white" }} />
+                                                        </div>
+                                                        <div className='w-[80%] h-[100%] flex justify-start items-center text-sm p-2 ' >
+                                                            {urlToName(msg.fileURL)}
+                                                        </div>
+                                                    </div>
                                                 ) : (
                                                     <>
                                                         {msg.message}
@@ -1011,9 +1106,14 @@ export const MainComponent: React.FC = () => {
                             </div>
                             <div className='w-[10%] h-[100%] flex justify-center items-center' >
                                 <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
-                                    {/* <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRecording} onMouseUp={stopRecordingAndSend}>
-                                                {isMediaRecorderReady ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
-                                            </div> */}
+                                    <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center'   >
+                                        <input type="file" className='w-[10%] h-[100%] opacity-0 cursor-pointer absolute ' onChange={fileInputHandler} />
+                                        <AttachFileIcon sx={{ color: 'white', width: '40%', height: '40%' }} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className='w-[10%] h-[100%] flex justify-center items-center' >
+                                <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
                                     <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
                                         {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
                                     </div>
