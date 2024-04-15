@@ -779,6 +779,14 @@ export const MainComponent: React.FC = () => {
         e.preventDefault()
         setTypedMessage('')
         setPlaceholderVal('')
+        
+        if (messages) {
+            setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
+        } else {
+            setMessages([{ message: typedMessage, isSender: true }])
+            setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
+        }
         handleAiSuggestion("user", "Provide folow up in maximum 10 words for this :" + typedMessage)
 
         const res = await fetch('https://giga-chat-2-backend.vercel.app/addChat', {
@@ -792,19 +800,14 @@ export const MainComponent: React.FC = () => {
                 console.log("huhu")
             }
         })
-        if (messages) {
-            setMessages((prevMessages) => [{ message: typedMessage, isSender: true }, ...prevMessages])
-            setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
-        } else {
-            setMessages([{ message: typedMessage, isSender: true }])
-            setOpenAiChats((prevChats) => [...prevChats, { role: "user", content: typedMessage }])
-        }
+
 
 
         if (socket) {
             socket.emit("send_Message", { message: typedMessage, room_Id: roomId, email: emailCookie.email, sender: currentUser.username, receiver: selectedUser[index]?.username });
         }
     }
+
 
     const [contextMenu, setContextMenu] = useState({ show: false, x: 0, y: 0 })
     const contextMenuRef = React.useRef<HTMLDivElement>(null)
