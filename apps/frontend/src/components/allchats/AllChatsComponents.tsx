@@ -639,7 +639,7 @@ export const MainComponent: React.FC = () => {
 
     const fetchInitialData = async () => {
         try {
-            await fetch('http://localhost:4000/getUsernames', {
+            await fetch('https://giga-chat-2-backend.vercel.app/getUsernames', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
