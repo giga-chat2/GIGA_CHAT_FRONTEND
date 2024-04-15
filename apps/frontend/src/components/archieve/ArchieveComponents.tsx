@@ -729,7 +729,7 @@ export const MainComponent: React.FC = () => {
                         </div>
                         <div className='relative flex flex-col-reverse w-[90%] h-[85%] border border-[#1e232c] rounded overflow-x-clip overflow-y-auto ' >
 
-                            {messages && messages.map((msg, idx) => (
+                                                        {messages && messages.map((msg, idx) => (
                                 <div className={`w-[450px] mb-20 border-none h-[150px] flex border mt-2 ${msg.isSender ? ' ml-auto sender' : ''} `} >
                                     {msg?.isSender ? <>
                                         <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0  ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex flex-col  `}>
@@ -740,10 +740,10 @@ export const MainComponent: React.FC = () => {
                                                 </audio>
                                             ) : (
                                                 <>
-                                                    {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                    {msg?.message?.includes('https://giga-chat-frontend-seven.vercel.app/pages/room/') ? (
                                                         <>
-                                                            {msg.message.split('http://localhost:3000/pages/room/')[0]}
-                                                            <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                            {msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[0]}
+                                                            <a href={`https://giga-chat-frontend-seven.vercel.app/pages/room/${msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
                                                         </>
                                                     ) : (
                                                         <>{msg.message}</>
@@ -781,10 +781,10 @@ export const MainComponent: React.FC = () => {
                                                 </audio>
                                             ) : (
                                                 <>
-                                                    {msg?.message?.includes('http://localhost:3000/pages/room/') ? (
+                                                    {msg?.message?.includes('https://giga-chat-frontend-seven.vercel.app/pages/room/') ? (
                                                         <>
-                                                            {msg.message.split('http://localhost:3000/pages/room/')[0]}
-                                                            <a href={`http://localhost:3000/pages/room/${msg.message.split('http://localhost:3000/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                            {msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[0]}
+                                                            <a href={`https://giga-chat-frontend-seven.vercel.app/pages/room/${msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
                                                         </>
                                                     ) : (
                                                         <>{msg.message}</>
