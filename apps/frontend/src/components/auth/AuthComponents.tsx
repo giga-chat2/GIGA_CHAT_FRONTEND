@@ -151,7 +151,7 @@ export const SignInForm: React.FC = () => {
                     {mobileView.mobileView ? <a href="#" id="sign-up-btn2" className='italic' onClick={() => document.querySelector(".container")?.classList.add("sign-up-mode")} >Don't have an account?</a> : <></>}
                     <p className="social-text">Or Sign in with social platform</p>
                     <div className="social-media">
-                        <a className="social-icon" id="facebookIcon">
+                        <a className="social-icon" id="facebookIcon" onClick={() => handleSocialSignIn('facebook')} >
                             <i className="fab fa-facebook-f" />
                         </a>
                         <a className="social-icon" id="twitterIcon" onClick={() => handleSocialSignIn('twitter')}>
@@ -403,7 +403,7 @@ export const SignUpForm = () => {
                     {mobileView.mobileView ? <a href="#" id="sign-up-btn2" className='italic' onClick={() => document.querySelector(".container")?.classList.remove("sign-up-mode")} >Already have an account?</a> : <></>}
                     <p className="social-text">Or Sign in with social platform</p>
                     <div className="social-media">
-                        <a className="social-icon" id="facebookIcon">
+                        <a className="social-icon" id="facebookIcon" onClick={() => handleSocialSignIn('facebook')} >
                             <i className="fab fa-facebook-f" />
                         </a>
                         <a className="social-icon" id="twitterIcon" onClick={() => handleSocialSignIn('twitter')}>
