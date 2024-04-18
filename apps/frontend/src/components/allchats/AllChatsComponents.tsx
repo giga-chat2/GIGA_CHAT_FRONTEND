@@ -1355,31 +1355,30 @@ export const MainComponent: React.FC = () => {
 
                                     </div>
                                 </div>
-                                <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
+                               <div className='flex justify-center items-center w-[90%] h-[15%] relative '>
 
-                                    <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
+                                    <div className='flex flex-center justify-center items-center relative w-[100%] h-[80%] border border-[#1e232c] rounded-full p-[5px] ' >
                                         <form onSubmit={onChatSubmit} className='submit-chat-form' >
-                                            <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
+                                            <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none border rounded-full ' placeholder={placeholderVal} onKeyDown={handleKeyDown} onChange={(e) => setTypedMessage(e.target.value)} value={typedMessage} />
                                             <input type="submit" className='hidden w-[0%] h-[0%]' />
                                         </form>
                                     </div>
-                                    <div className='w-[10%] h-[100%] flex justify-center items-center' >
-                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
-                                            <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center'   >
+                                    <div className='w-[15%] h-[100%] flex justify-center items-center' >
+                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded-full ' >
+                                            <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center border rounded-full '   >
                                                 <input type="file" className='w-[10%] h-[100%] opacity-0 cursor-pointer absolute ' onChange={fileInputHandler} />
-                                                <AttachFileIcon sx={{ color: 'white', width: '40%', height: '40%' }} />
+                                                <AttachFileIcon sx={{ color: 'white', width: '30%', height: '30%' }} />
                                             </div>
                                         </div>
                                     </div>
-                                    <div className='w-[10%] h-[100%] flex justify-center items-center' >
-                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded ' >
-                                            <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
-                                                {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
+                                    <div className='w-[15%] h-[100%] flex justify-center items-center' >
+                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded-full ' >
+                                            <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer border rounded-full text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
+                                                {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '25%', height: '25%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </> : <>
                             <div className='flex flex-col w-[100%] h-screen  justify-center items-center ' >
