@@ -148,9 +148,10 @@ export const MainComponent: React.FC = () => {
         let session = sessionStorage.getItem('sessionId')
         try {
             const res = await axios.post("https://giga-chat-2-backend.vercel.app/modelResponse", { model: model, message: typedMessage })
-            setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false }, ...prevMessages])
-            const userResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true })
-            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime })
+            setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false, imageURL: res.data.imageURL, messageNumber: lastestMessage + 1 }, ...prevMessages])
+            setLastestMessage(lastestMessage + 1)
+            const userResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true  })
+            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime,imageURL: res.data.imageURL })
             setBotTyping(false)
         } catch (e) {
             console.log(e)
@@ -381,9 +382,9 @@ export const MainComponent: React.FC = () => {
                             {model !== "" && messages && messages.map((msg, idx) =>
                             (
                                 <>
-                                    <div className={`w-[500px] border-none h-[fit-content] flex mb-20 border border-white ${msg.isSender ? ' ml-auto sender' : ''} `} >
+                                    <div className={`w-[700px] border-none h-[fit-content] flex mb-20 border border-white ${msg.isSender ? ' ml-auto sender' : ''} `} >
                                         {msg.isSender ? <>
-                                            <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0  ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white flex flex-col  `}>
+                                            <div className={`w-[fit-content] h-[fit-content] font-thin text-sm mt-2 p-0 mb-2 mr-0  ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubbleAi right ' : 'bg-[#1e232c] rounded-e bubbleAi left '}  text-white flex flex-col  `}>
                                                 {msg.message}
                                             </div>
                                             <div className='rounded-full border-none w-[40px] h-[40px] mt-[auto] overflow-hidden flex justify-end ' >
@@ -400,21 +401,39 @@ export const MainComponent: React.FC = () => {
 
                                         </> : <>
                                             <div className='border-none flex items-center justify-center w-[50px] h-[50px] overflow-hidden mt-[auto]' >
-
                                                 <img
-                                                    src={ msg.model === 'openai' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fopenai.png?alt=media&token=9e6f0bd8-a12c-434a-a41d-045575fddd1b` : msg.model === 'antrophic' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fantrophic.png?alt=media&token=8720acb0-83f6-4faf-9628-cce425f1221b` : msg.model === 'meta' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmeta.png?alt=media&token=fd3ae277-ea8c-49c4-8cff-3b6f228cd095` : msg.model === 'gemma' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemma.png?alt=media&token=88575525-9045-4ca8-bb0b-e152b17fd8d6` : msg.model === 'mistral' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmistral.png?alt=media&token=a4049518-19f5-4e41-acce-89c7e598a4af` : msg.model === 'gemini' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemini.png?alt=media&token=2e11ca17-ba6a-4835-9721-31435c0cbf93` : null}
+                                                    src={msg.model === 'openai' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fopenai.png?alt=media&token=9e6f0bd8-a12c-434a-a41d-045575fddd1b` : msg.model === 'antrophic' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fantrophic.png?alt=media&token=8720acb0-83f6-4faf-9628-cce425f1221b` : msg.model === 'meta' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmeta.png?alt=media&token=fd3ae277-ea8c-49c4-8cff-3b6f228cd095` : msg.model === 'gemma' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemma.png?alt=media&token=88575525-9045-4ca8-bb0b-e152b17fd8d6` : msg.model === 'mistral' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fmistral.png?alt=media&token=a4049518-19f5-4e41-acce-89c7e598a4af` : msg.model === 'gemini' ? `https://firebasestorage.googleapis.com/v0/b/giga-chat-9416b.appspot.com/o/modelImages%2Fgemini.png?alt=media&token=2e11ca17-ba6a-4835-9721-31435c0cbf93` : null}
                                                     alt="profile"
                                                     style={{ border: "none", objectFit: "cover", backgroundColor: "black" }}
                                                 />
                                             </div>
-                                            <div className={`w-[fit-content] h-[fit-content] mt-2 font-thin text-sm
-                                             border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubble right ' : 'bg-[#1e232c] rounded-e bubble left '}  text-white p-[1.5%] flex font-semibold  `}>{msg.message}</div>
+                                            <div className={`w-[fit-content]  h-[fit-content] mt-2 font-thin text-sm
+                                             border-none ${msg.isSender ? 'bg-[#3d3c3c] ml-auto rounded-s bubbleAi right ' : 'bg-[#1e232c] rounded-e bubbleAi left '}  text-white p-[5%] flex flex-col font-semibold  `}>
+                                                {msg.imageURL ? <img src={msg.imageURL} alt="image" style={{ width: "100%", height: "50%" }} /> : <></>}
+                                                {msg.messageNumber && lastestMessage === msg.messageNumber ? <>
+                                                    <p className='w-[100%] h-[50%] mt-[5%] '>
+                                                        <Typewriter
+                                                            options={{
+                                                                strings: [msg.message],
+                                                                autoStart: true,
+                                                                loop: false,
+                                                                delay: 5,
+                                                                deleteSpeed: Infinity
+                                                            }}
+                                                        />
+                                                    </p>
+                                                </> : <>
+                                                    <p className={`w-[100%] h-[50%] ${msg.imageURL ? ' mt-[5%]' : '' }  `} > {msg.message} </p>
+                                                </>}
+
+                                            </div>
                                         </>}
                                     </div>
                                 </>
                             )
 
                             )}
+
 
 
                         </div>
