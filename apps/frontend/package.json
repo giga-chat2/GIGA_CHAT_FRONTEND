@@ -50,7 +50,8 @@
     "react-native-svg": "^15.0.0",
     "react-redux": "^9.1.0",
     "react-toastify": "^10.0.4",
-    "sweetalert2": "^11.10.5"
+    "sweetalert2": "^11.10.5",
+    "typewriter-effect": "^2.21.0"
   },
   "devDependencies": {
     "@types/firebase": "^3.2.1",
