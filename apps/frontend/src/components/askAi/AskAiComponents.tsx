@@ -17,6 +17,7 @@ import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 type Event = MouseEvent | TouchEvent;
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useSession } from 'next-auth/react';
+import Typewriter from 'typewriter-effect';
 
 
 export const useClickOutside = <T extends HTMLElement = HTMLElement>(
@@ -137,6 +138,8 @@ export const MainComponent: React.FC = () => {
         transform: btnCount !== 0 ? 'translateY(-300%)' : 'none',
     };
     const [botTyping, setBotTyping] = useState<boolean>(false)
+    const [lastestMessage, setLastestMessage] = useState<number>(0)
+
 
     const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
