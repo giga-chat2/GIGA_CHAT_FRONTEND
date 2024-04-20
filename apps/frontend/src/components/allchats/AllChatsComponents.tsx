@@ -1364,7 +1364,7 @@ export const MainComponent: React.FC = () => {
                                         </form>
                                     </div>
                                     <div className='w-[15%] h-[100%] flex justify-center items-center' >
-                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded-full ' >
+                                        <div className='w-[100px] h-[100px] border border-[#1e232c] flex justify-center items-center rounded-full ' >
                                             <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer text-white text-center border rounded-full '   >
                                                 <input type="file" className='w-[10%] h-[100%] opacity-0 cursor-pointer absolute ' onChange={fileInputHandler} />
                                                 <AttachFileIcon sx={{ color: 'white', width: '30%', height: '30%' }} />
@@ -1372,7 +1372,7 @@ export const MainComponent: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className='w-[15%] h-[100%] flex justify-center items-center' >
-                                        <div className='w-[90%] h-[80%] border border-[#1e232c] flex justify-center items-center rounded-full ' >
+                                        <div className='w-[100px] h-[100px] border border-[#1e232c] flex justify-center items-center rounded-full ' >
                                             <div className='bg-[#1e232c] flex justify-center items-center w-[90%] h-[90%] cursor-pointer border rounded-full text-white text-center' onMouseDown={startRec} onMouseUp={stopRec}>
                                                 {is_recording ? <SettingsVoiceIcon sx={{ color: 'white', width: '25%', height: '25%' }} /> : <KeyboardVoiceIcon sx={{ color: 'white', width: '40%', height: '40%' }} />}
                                             </div>
