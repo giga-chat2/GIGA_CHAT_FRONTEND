@@ -18,7 +18,9 @@ type Event = MouseEvent | TouchEvent;
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useSession } from 'next-auth/react';
 import Typewriter from 'typewriter-effect';
-
+import FormData from "form-data";
+import { aiImageDB } from '@/config/firebase.config';
+import { getStorage, ref, getDownloadURL, uploadBytesResumable } from "firebase/storage";
 
 export const useClickOutside = <T extends HTMLElement = HTMLElement>(
     ref: RefObject<T>,
@@ -141,6 +143,210 @@ export const MainComponent: React.FC = () => {
     const [lastestMessage, setLastestMessage] = useState<number>(0)
 
 
+    const getAIImage = async (message:string) => {
+        try {
+            const formData = {
+                prompt: message,
+                output_format: "jpeg"
+            };
+            let imageResponse = await axios.postForm(
+                `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                axios.toFormData(formData, new FormData()),
+                {
+                    validateStatus: undefined,
+                    responseType: "arraybuffer",
+                    headers: {
+                        Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY1,
+                        Accept: "image/*"
+                    },
+                },
+            );
+
+            if (imageResponse.status === 402) {
+                imageResponse = await axios.postForm(
+                    `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                    axios.toFormData(formData, new FormData()),
+                    {
+                        validateStatus: undefined,
+                        responseType: "arraybuffer",
+                        headers: {
+                            Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY2,
+                            Accept: "image/*"
+                        },
+                    },
+                );
+
+                if (imageResponse.status === 402) {
+                    imageResponse = await axios.postForm(
+                        `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                        axios.toFormData(formData, new FormData()),
+                        {
+                            validateStatus: undefined,
+                            responseType: "arraybuffer",
+                            headers: {
+                                Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY3,
+                                Accept: "image/*"
+                            },
+                        },
+                    );
+
+                    if (imageResponse.status === 402) {
+                        imageResponse = await axios.postForm(
+                            `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                            axios.toFormData(formData, new FormData()),
+                            {
+                                validateStatus: undefined,
+                                responseType: "arraybuffer",
+                                headers: {
+                                    Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY4,
+                                    Accept: "image/*"
+                                },
+                            },
+                        );
+
+                        if (imageResponse.status === 402) {
+                            imageResponse = await axios.postForm(
+                                `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                axios.toFormData(formData, new FormData()),
+                                {
+                                    validateStatus: undefined,
+                                    responseType: "arraybuffer",
+                                    headers: {
+                                        Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY5,
+                                        Accept: "image/*"
+                                    },
+                                },
+                            );
+
+                            if (imageResponse.status === 402) {
+                                imageResponse = await axios.postForm(
+                                    `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                    axios.toFormData(formData, new FormData()),
+                                    {
+                                        validateStatus: undefined,
+                                        responseType: "arraybuffer",
+                                        headers: {
+                                            Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY6,
+                                            Accept: "image/*"
+                                        },
+                                    },
+                                );
+
+                                if (imageResponse.status === 402) {
+                                    imageResponse = await axios.postForm(
+                                        `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                        axios.toFormData(formData, new FormData()),
+                                        {
+                                            validateStatus: undefined,
+                                            responseType: "arraybuffer",
+                                            headers: {
+                                                Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY7,
+                                                Accept: "image/*"
+                                            },
+                                        },
+                                    );
+
+                                    if (imageResponse.status === 402) {
+                                        imageResponse = await axios.postForm(
+                                            `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                            axios.toFormData(formData, new FormData()),
+                                            {
+                                                validateStatus: undefined,
+                                                responseType: "arraybuffer",
+                                                headers: {
+                                                    Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY8,
+                                                    Accept: "image/*"
+                                                },
+                                            },
+                                        );
+
+                                        if (imageResponse.status === 402) {
+                                            imageResponse = await axios.postForm(
+                                                `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                                axios.toFormData(formData, new FormData()),
+                                                {
+                                                    validateStatus: undefined,
+                                                    responseType: "arraybuffer",
+                                                    headers: {
+                                                        Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY9,
+                                                        Accept: "image/*"
+                                                    },
+                                                },
+                                            );
+
+                                            if (imageResponse.status === 402) {
+                                                imageResponse = await axios.postForm(
+                                                    `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                                    axios.toFormData(formData, new FormData()),
+                                                    {
+                                                        validateStatus: undefined,
+                                                        responseType: "arraybuffer",
+                                                        headers: {
+                                                            Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY10,
+                                                            Accept: "image/*"
+                                                        },
+                                                    },
+                                                );
+                                                if (imageResponse.status === 402) {
+                                                    imageResponse = await axios.postForm(
+                                                        `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                                        axios.toFormData(formData, new FormData()),
+                                                        {
+                                                            validateStatus: undefined,
+                                                            responseType: "arraybuffer",
+                                                            headers: {
+                                                                Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY11,
+                                                                Accept: "image/*"
+                                                            },
+                                                        },
+                                                    );
+                                                    if (imageResponse.status === 402) {
+                                                        imageResponse = await axios.postForm(
+                                                            `https://api.stability.ai/v2beta/stable-image/generate/sd3`,
+                                                            axios.toFormData(formData, new FormData()),
+                                                            {
+                                                                validateStatus: undefined,
+                                                                responseType: "arraybuffer",
+                                                                headers: {
+                                                                    Authorization: process.env.NEXT_PUBLIC_STABILITY_API_KEY12,
+                                                                    Accept: "image/*"
+                                                                },
+                                                            },
+                                                        );
+                                                    }
+                                                }
+                                            }
+
+                                        }
+
+                                    }
+
+                                }
+
+
+                            }
+                        }
+                    }
+                }
+            }
+        
+            const uniqueFileName = `${Date.now()}_${message}`;
+            const storageRef = ref(aiImageDB, `aiImages/${uniqueFileName}`);
+        
+            const metadata = {
+              contentType: 'jpeg',
+            };
+        
+            const snapshot = await uploadBytesResumable(storageRef, imageResponse.data, metadata);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            return downloadURL;
+
+        } catch (e){
+            console.log(e)
+        }
+    }
+
     const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setBotTyping(true)
@@ -150,12 +356,13 @@ export const MainComponent: React.FC = () => {
         setTypedMessage("")
         let session = sessionStorage.getItem('sessionId')
         try {
-            const imageResponse = await axios.post("https://giga-chat-2-backend.vercel.app/getAIImage",{message:typedMessage})
+            // const imageResponse = await axios.post("https://giga-chat-2-backend.vercel.app/getAIImage", { message: typedMessage })
+            const imageURL = await getAIImage(typedMessage)
             const res = await axios.post("https://giga-chat-2-backend.vercel.app/modelResponse", { model: model, message: typedMessage })
-            setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false, imageURL: imageResponse.data.imageURL, messageNumber: lastestMessage + 1 }, ...prevMessages])
-            setLastestMessage(lastestMessage + 1)   
-            const userResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true  })
-            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat",  { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime,imageURL: imageResponse.data.imageURL })
+            setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false, imageURL: imageURL, messageNumber: lastestMessage + 1 }, ...prevMessages])
+            setLastestMessage(lastestMessage + 1)
+            const userResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true })
+            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime, imageURL: imageURL })
             setBotTyping(false)
         } catch (e) {
             console.log(e)
@@ -444,9 +651,9 @@ export const MainComponent: React.FC = () => {
                     </div>
 
                     <div className='flex justify-center items-center w-[100%] h-[15%] relative '>
-                        <div className='flex flex-center justify-center items-center relative w-[90%] h-[80%] border border-[#1e232c] rounded p-[5px] ' >
+                        <div className='flex flex-center justify-center items-center relative w-[90%] h-[80%] border border-[#1e232c] rounded-full p-[5px] ' >
                             <form onSubmit={handleChatSubmit} className='w-[100%] h-[100%]' >
-                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] text-white text-center outline-none' value={typedMessage} onChange={(e) => setTypedMessage(e.target.value)} placeholder={botTyping ? 'Bot is Typing...' : `Enter your query and hit "Enter"`} disabled={botTyping} />
+                                <input type="text" className='bg-[#1e232c] w-[100%] h-[100%] border rounded-full text-white text-center outline-none' value={typedMessage} onChange={(e) => setTypedMessage(e.target.value)} placeholder={botTyping ? 'Bot is Typing...' : `Enter your query and hit "Enter"`} disabled={botTyping} />
                                 <input type="submit" className='hidden w-[0%] h-[0%]' />
                             </form>
                         </div>
