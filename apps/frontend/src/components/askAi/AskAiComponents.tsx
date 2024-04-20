@@ -85,6 +85,8 @@ export const MainComponent: React.FC = () => {
 
     const handleModelChoose = async (isFirstTime: boolean, btnNumber: number, modelName: string) => {
         let session;
+        setLastestMessage(lastestMessage + 1)
+
         const Toast = Swal.mixin({
             toast: true,
             position: "top-end",
