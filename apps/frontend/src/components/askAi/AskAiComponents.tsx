@@ -150,11 +150,12 @@ export const MainComponent: React.FC = () => {
         setTypedMessage("")
         let session = sessionStorage.getItem('sessionId')
         try {
+            const imageResponse = await axios.post("https://giga-chat-2-backend.vercel.app/getAIImage",{message:typedMessage})
             const res = await axios.post("https://giga-chat-2-backend.vercel.app/modelResponse", { model: model, message: typedMessage })
-            setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false, imageURL: res.data.imageURL, messageNumber: lastestMessage + 1 }, ...prevMessages])
-            setLastestMessage(lastestMessage + 1)
+            setMessages((prevMessages) => [{ model: model, message: res.data.message, isSender: false, imageURL: imageResponse.data.imageURL, messageNumber: lastestMessage + 1 }, ...prevMessages])
+            setLastestMessage(lastestMessage + 1)   
             const userResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: typedMessage, session: session, currentUsername: currentUser?.username, model: model, isSender: true  })
-            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat", { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime,imageURL: res.data.imageURL })
+            const botResponse = await axios.post("https://giga-chat-2-backend.vercel.app/addAIChat",  { message: res.data.message, session: session, currentUsername: currentUser?.username, model: model, isSender: false, endingTime: currentTime,imageURL: imageResponse.data.imageURL })
             setBotTyping(false)
         } catch (e) {
             console.log(e)
