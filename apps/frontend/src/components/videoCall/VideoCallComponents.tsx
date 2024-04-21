@@ -101,9 +101,8 @@ export const VideoCallMainComponent: React.FC = () => {
                 socket.emit("joinRoom", roomId)
                 sharedUsers.forEach(user => {
                     console.log(user)
-                    socket.emit("sendRoomId", { roomId: user?.roomId, sender: currentUser, receiver: user.username })
                     console.log("before")
-                    socket.emit("sendMessage", { message: `Let's meet my friend : https://giga-chat-frontend-seven.vercel.app/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email });
+                    socket.emit("sendMessage", { message: `Let's meet my friend : https://giga-chat-frontend-seven.vercel.app/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email, sender: currentUser, receiver: user.username });
                     console.log("after")
                 })
             }
@@ -244,8 +243,8 @@ export const RoomComponent: React.FC<IMyProps> = ({ userName }) => {
     }
     const myMeeting = async (element) => {
         const { ZegoUIKitPrebuilt } = await import("@zegocloud/zego-uikit-prebuilt");
-        const appID = 2010080204
-        const serverSecret = 'dec380ae8f61e199d65bfb7bf8f2b964'
+        const appID = 2123486985
+        const serverSecret = 'ce2ab5d43ff38950e8a8c63170ac84b2'
         const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(appID, serverSecret, params.roomId[0], userName, userName, 3600);
         const zc = ZegoUIKitPrebuilt.create(kitToken)
         zc.joinRoom({
