@@ -102,7 +102,7 @@ export const VideoCallMainComponent: React.FC = () => {
                 sharedUsers.forEach(user => {
                     console.log(user)
                     console.log("before")
-                    socket.emit("sendMessage", { message: `Let's meet my friend : https://giga-chat-frontend-seven.vercel.app/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email, sender: currentUser, receiver: user.username });
+                    socket.emit("send_Message", { message: `Let's meet my friend : https://giga-chat-frontend-seven.vercel.app/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email, sender: currentUser.username, receiver: user.username });
                     console.log("after")
                 })
             }
