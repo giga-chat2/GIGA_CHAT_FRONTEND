@@ -211,6 +211,7 @@ export const SignUpForm = () => {
                     title: "Not a valid email",
                     text: "Please enter a valid email!"
                 });
+                setLoading(false)
                 return
             }
             const passwordRegex = /^(?=.*[A-Za-z0-9])(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -220,6 +221,7 @@ export const SignUpForm = () => {
                     title: "Not a valid password",
                     text: "Password should be atleast 8 characters long and should contain special characters,letters and numbers!"
                 });
+                setLoading(false)
                 return
             }
             const CustomToast = () => (
@@ -399,7 +401,7 @@ export const SignUpForm = () => {
                         </div>
                     </div>
 
-                    <input type="submit" value={loading ? loading && dispCodeDiv ? "Verfying..." : "Sending Code..." : dispCodeDiv ? "Verify Code" : "Get Code"} id='register_btn' className="btn" />
+                    <input type="submit" value={ dispCodeDiv && loading ? "Verifying Code..." :   dispCodeDiv ? "Submit Code" : loading ? "Verifying..." : "Get Code" } id='register_btn' className="btn" />
                     {mobileView.mobileView ? <a href="#" id="sign-up-btn2" className='italic' onClick={() => document.querySelector(".container")?.classList.remove("sign-up-mode")} >Already have an account?</a> : <></>}
                     <p className="social-text">Or Sign in with social platform</p>
                     <div className="social-media">
