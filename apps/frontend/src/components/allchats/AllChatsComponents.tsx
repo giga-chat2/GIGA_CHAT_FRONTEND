@@ -1301,10 +1301,10 @@ export const MainComponent: React.FC = () => {
 
                                                             ) : (
                                                                 <>
-                                                                    {msg?.message?.includes('https://giga-chat-frontend-seven.vercel.app/pages/room/') ? (
+                                                                    {msg?.message?.includes('https://www.giga-chat.tech/pages/room/') ? (
                                                                         <>
-                                                                            {msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[0]}
-                                                                            <a href={`https://giga-chat-frontend-seven.vercel.app/pages/room/${msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                                            {msg.message.split('https://www.giga-chat.tech/pages/room/')[0]}
+                                                                            <a href={`https://www.giga-chat.tech/pages/room/${msg.message.split('https://www.giga-chat.tech/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
                                                                         </>
                                                                     ) : (
                                                                         <>{msg.message}</>
@@ -1356,10 +1356,10 @@ export const MainComponent: React.FC = () => {
                                                                         </div>
                                                                     ) : (
                                                                         <>
-                                                                            {msg?.message?.includes('https://giga-chat-frontend-seven.vercel.app/pages/room/') ? (
+                                                                            {msg?.message?.includes('https://www.giga-chat.tech/pages/room/') ? (
                                                                                 <>
-                                                                                    {msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[0]}
-                                                                                    <a href={`https://giga-chat-frontend-seven.vercel.app/pages/room/${msg.message.split('https://giga-chat-frontend-seven.vercel.app/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
+                                                                                    {msg.message.split('https://www.giga-chat.tech/pages/room/')[0]}
+                                                                                    <a href={`https://www.giga-chat.tech/pages/room/${msg.message.split('https://www.giga-chat.tech/pages/room/')[1]}`} target="_blank" rel="noopener noreferrer" className='underline'>click here</a>
                                                                                 </>
                                                                             ) : (
                                                                                 <>{msg.message}</>
