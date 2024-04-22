@@ -74,7 +74,7 @@ export const SignInForm: React.FC = () => {
     const handleSignIn = (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         try {
-            fetch('https://giga-chat-2-backend.vercel.app/login', {
+            fetch('https://giga-chat-2-frontend.vercel.app/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -231,7 +231,7 @@ export const SignUpForm = () => {
             );
 
             try {
-                const res = await fetch("https://giga-chat-2-backend.vercel.app/register", {
+                const res = await fetch("https://giga-chat-2-frontend.vercel.app/register", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -297,7 +297,7 @@ export const SignUpForm = () => {
             setLoading(true)
 
             try {
-                const res = await fetch("https://giga-chat-2-backend.vercel.app/register", {
+                const res = await fetch("https://giga-chat-2-frontend.vercel.app/register", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
