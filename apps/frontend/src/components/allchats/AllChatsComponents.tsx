@@ -1047,25 +1047,29 @@ export const MainComponent: React.FC = () => {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('roomId', roomId);
-            formData.append('sender', currentUser.username);
-            if (selectedUser) {
-                formData.append('receiver', selectedUser[index]?.username);
+            // formData.append('roomId', roomId);
+            // formData.append('sender', currentUser.username);
+            for (var pair of formData.entries()) {
+                console.log(pair[0] + ', ' + pair[1]);
             }
+            // if (selectedUser) {
+            //     formData.append('receiver', selectedUser[index]?.username);
+            // }
 
             // Make a POST request to the server
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/uploadFile', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+            console.log(1)
+            const getFileURL = await axios.post('https://giga-chat-2-backend.vercel.app/getFileURL', formData, { headers: { 'Content-Type': 'application/json' } })
+            const response = await axios.post('https://giga-chat-2-backend.vercel.app/uploadFile', {roomId:roomId,sender:currentUser.username,receiver: selectedUser[index]?.username ,fileURL:getFileURL.data.fileURL } );
+            console.log(2)
 
             const data = response.data;
             const fileURL = data.fileURL;
             setMessages((prevMessages) => [{ fileURL: fileURL, isSender: true }, ...prevMessages])
             if (socket) {
+                console.log(3)
                 socket.emit('voice_message', { fileURL: fileURL, sender: currentUser.username, receiver: selectedUser[index]?.username })
             }
+            console.log(4)
 
 
 
