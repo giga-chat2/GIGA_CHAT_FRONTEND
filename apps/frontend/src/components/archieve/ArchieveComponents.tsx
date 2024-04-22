@@ -152,7 +152,7 @@ export const MainComponent: React.FC = () => {
         if (session?.status === 'authenticated') {
             setEmailCookie('email', session?.data?.user?.email, { path: '/' })
         }
-        else if (session?.status === 'unauthenticated') {
+        else if (session?.status === 'unauthenticated'  && emailCookie.email === undefined   ) {
             window.location.href = '/pages/auth'
         }
     }, [])
