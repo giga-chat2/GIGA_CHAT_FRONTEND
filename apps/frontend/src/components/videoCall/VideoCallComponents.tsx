@@ -37,7 +37,7 @@ export const VideoCallMainComponent: React.FC = () => {
     const [meetings, setMeetings] = useState<object[]>([])
     const fetchMeetings = async () => {
         try {
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/getMeetings', { username: currentUser.username })
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/getMeetings', { username: currentUser.username })
             // console.log(response)
             setMeetings(response.data.meetings)
         } catch (e) { console.log(e) }
@@ -48,7 +48,7 @@ export const VideoCallMainComponent: React.FC = () => {
 
     const fetchInitialData = async () => {
         try {
-            await fetch('https://giga-chat-2-backend.vercel.app/getUsernames', {
+            await fetch('https://giga-chat-2-frontend.vercel.app/getUsernames', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -106,7 +106,7 @@ export const VideoCallMainComponent: React.FC = () => {
                     console.log("after")
                 })
             }
-            const response = await fetch('https://giga-chat-2-backend.vercel.app/shareLink', {
+            const response = await fetch('https://giga-chat-2-frontend.vercel.app/shareLink', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -231,13 +231,13 @@ export const RoomComponent: React.FC<IMyProps> = ({ userName }) => {
     const onJoinMeet = async () => {
         setMeetingId(params.roomId[0])
         try {
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/enterStartMeet', { username: userName, meetingId: params.roomId[0], startTime: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString() })
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/enterStartMeet', { username: userName, meetingId: params.roomId[0], startTime: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString() })
             console.log(response)
         } catch (e) { console.log(e) }
     }
     const onLeaveMeet = async () => {
         try {
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/enterEndMeet', { username: userName, meetingId: params.roomId[0], endTime: new Date().toLocaleTimeString() })
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/enterEndMeet', { username: userName, meetingId: params.roomId[0], endTime: new Date().toLocaleTimeString() })
             console.log(response)
         } catch (e) { console.log(e) }
     }
