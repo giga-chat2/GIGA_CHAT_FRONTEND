@@ -532,17 +532,22 @@ export const MainComponent: React.FC = () => {
     }
 
     useEffect(() => {
-        if (lastestReceived !== '' && selectedUser) {
-            const userIndex = selectedUser.findIndex((user) => user?.username === lastestReceived)
-            if (userIndex !== -1) {
-                const userToMove = selectedUser?.splice(userIndex, 1)[0];
-                selectedUser.unshift(userToMove);
-                setSelectedUser([...selectedUser]);
-                handleUserClick(null, undefined, getCookieValue('currentSelectedUser'))
-                addPending(lastestReceived);
+        console.log("got called", recievedMessage.recievedMessage)
+        if (firstTimeLoaded) {
+            handleAiSuggestion("assistant", "Provide response in maximum 10 words for this : " + recievedMessage.recievedMessage)
+        } else {
+            setFirstTimeLoaded(true)
+        }
+        if (recievedMessage.recievedMessage) {
+            if (recievedMessage.recievedMessage !== '' && messages) {
+                setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
+                setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
+            } else {
+                setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
+                setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
             }
         }
-    }, [lastestReceived])
+    }, [recievedMessage.recievedMessage]);
 
     const [animationTarget, setAnimationTarget] = useState(null);
 
@@ -596,16 +601,18 @@ export const MainComponent: React.FC = () => {
     const handleAiSuggestion = async (role: string, msg: string) => {
         if (aiSuggestions.aiSuggestions) {
             try {
+                console.log(msg, "msg")
                 var openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY1, dangerouslyAllowBrowser: true });
                 const completion = await openai.chat.completions.create({
                     messages: [...openAiChats, { role: role, content: msg }],
                     model: "gpt-3.5-turbo",
                 });
+                console.log(completion)
                 setPlaceholderVal(completion?.choices[0]?.message?.content)
             }
             catch (e) {
                 try {
-                    console.log("error aaya")
+                    console.log("error aaya", msg, "role", openAiChats)
                     openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY2, dangerouslyAllowBrowser: true });
                     const completion = await openai.chat.completions.create({
                         messages: [...openAiChats, { role: role, content: msg }],
@@ -613,7 +620,22 @@ export const MainComponent: React.FC = () => {
                     });
                     setPlaceholderVal(completion.choices[0].message.content)
                 } catch (e) {
-                    console.log(e)
+                    try {
+                        openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY3, dangerouslyAllowBrowser: true });
+                        const completion = await openai.chat.completions.create({
+                            messages: [...openAiChats, { role: role, content: msg }],
+                            model: "gpt-3.5-turbo",
+                        });
+                        setPlaceholderVal(completion.choices[0].message.content)
+                    } catch (e) {
+                        openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_OPEN_AI_KEY4, dangerouslyAllowBrowser: true });
+                        const completion = await openai.chat.completions.create({
+                            messages: [...openAiChats, { role: role, content: msg }],
+                            model: "gpt-3.5-turbo",
+                        });
+                        setPlaceholderVal(completion.choices[0].message.content)
+                    }
+
                 }
             }
         } else {
