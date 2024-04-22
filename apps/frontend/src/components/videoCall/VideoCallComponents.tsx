@@ -1,6 +1,6 @@
 // @ts-nocheck
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 import Swal from 'sweetalert2';
 import { useCookies } from 'react-cookie'
 import './index.css'
