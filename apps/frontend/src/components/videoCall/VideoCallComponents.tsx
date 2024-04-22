@@ -102,7 +102,7 @@ export const VideoCallMainComponent: React.FC = () => {
                 sharedUsers.forEach(user => {
                     console.log(user)
                     console.log("before")
-                    socket.emit("send_Message", { message: `Let's meet my friend : https://giga-chat-frontend-seven.vercel.app/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email, sender: currentUser.username, receiver: user.username });
+                    socket.emit("send_Message", { message: `Let's meet my friend : https://www.giga-chat.tech/pages/room/${roomId}`, room_Id: user?.roomId, email: emailCookie.email, sender: currentUser.username, receiver: user.username });
                     console.log("after")
                 })
             }
@@ -114,7 +114,7 @@ export const VideoCallMainComponent: React.FC = () => {
                 body: JSON.stringify({ currentUser: currentUser.username, sharedUsers: sharedUsers, roomId: roomId })
             })
             console.log("Before")
-            window.open(`https://giga-chat-frontend-seven.vercel.app/pages/room/${roomId}`, '_blank');
+            window.open(`https://www.giga-chat.tech/pages/room/${roomId}`, '_blank');
             setDispCreateGroupPopUp(false)
             console.log('redirect hona chahiye tha')
         } catch (e) {
