@@ -249,7 +249,7 @@ export const MainComponent: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            await fetch('https://giga-chat-2-backend.vercel.app/getInitlaData', {
+            await fetch('https://giga-chat-2-frontend.vercel.app/getInitlaData', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -323,7 +323,7 @@ export const MainComponent: React.FC = () => {
             confirmButtonText: 'Yes, send request!'
         }).then(async (res) => {
             if (res.isConfirmed) {
-                const response = await fetch('https://giga-chat-2-backend.vercel.app/sendRequestToJoinGroup', {
+                const response = await fetch('https://giga-chat-2-frontend.vercel.app/sendRequestToJoinGroup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -366,7 +366,7 @@ export const MainComponent: React.FC = () => {
         //     setRoomID('roomID', selectedGroups[index]?.roomId, { path: '/' })
         // }
         try {
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/getGroupChats', { groupName: initialSelectedGroupName })
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/getGroupChats', { groupName: initialSelectedGroupName })
             setMessages(response.data.chats)
         } catch (e) { console.log(e) }
 
@@ -391,7 +391,7 @@ export const MainComponent: React.FC = () => {
             // socket.emit("send_Message", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, room_Id: selectedGroups[idx].roomId, user: currentUser?.username, email: emailCookie.email });
             socket.emit("send_grp_message", { message: typedMessage, profilePic: profilePicPath?.profilePicPath, sender: currentUserName?.username, groupName: selectedGroups[idx]?.groupName })
         }
-        const res = await fetch('https://giga-chat-2-backend.vercel.app/addChatInGroup', {
+        const res = await fetch('https://giga-chat-2-frontend.vercel.app/addChatInGroup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -433,7 +433,7 @@ export const MainComponent: React.FC = () => {
             title: "Group created successfully!"
         });
 
-        const res = await fetch('https://giga-chat-2-backend.vercel.app/createGroup', {
+        const res = await fetch('https://giga-chat-2-frontend.vercel.app/createGroup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -514,7 +514,7 @@ export const MainComponent: React.FC = () => {
             formData.append('profilePic', selectedFile);
             try {
                 console.log("before calling")
-                const response = await axios.post('https://giga-chat-2-backend.vercel.app/uploadGroupProfilePic', formData);
+                const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadGroupProfilePic', formData);
                 console.log("after calling")
                 if (response.status === 200) {
                     const Toast = Swal.mixin({
@@ -551,7 +551,7 @@ export const MainComponent: React.FC = () => {
             confirmButtonText: 'Yes, leave it!'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const res = await fetch('https://giga-chat-2-backend.vercel.app/leaveGroup', {
+                const res = await fetch('https://giga-chat-2-frontend.vercel.app/leaveGroup', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -596,7 +596,7 @@ export const MainComponent: React.FC = () => {
             formData.append('profilePic', profilePicPath?.profilePicPath);
 
             try {
-                const response = await axios.post('https://giga-chat-2-backend.vercel.app/groupUploadAudio', formData)
+                const response = await axios.post('https://giga-chat-2-frontend.vercel.app/groupUploadAudio', formData)
                 console.log(response)
                 const data = response.data;
                 const audioURL = data.audioURL;
@@ -641,7 +641,7 @@ export const MainComponent: React.FC = () => {
         try {
             console.log(groupName, selectedGroupMembers, requestedMembers)
             const combineMembers = [...selectedGroupMembers, ...requestedMembers]
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/addNewMembersToGroup', { groupName: selectedGroups[idx]?.groupName, selectedGroupMembers: combineMembers })
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/addNewMembersToGroup', { groupName: selectedGroups[idx]?.groupName, selectedGroupMembers: combineMembers })
             if (response.status === 200) {
                 Swal.fire(
                     'Members Added!',
@@ -664,7 +664,7 @@ export const MainComponent: React.FC = () => {
 
             console.log(2)
 
-            const response = await axios.post('https://giga-chat-2-backend.vercel.app/groupUploadFile', formData, {
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/groupUploadFile', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
