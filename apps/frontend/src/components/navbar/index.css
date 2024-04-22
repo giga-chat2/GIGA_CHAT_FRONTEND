@@ -4,7 +4,7 @@
 .parent:hover {
   cursor: pointer;
 }
-.activeNavbar {
+.active {
   color: white !important;
 }
 .drawer {
