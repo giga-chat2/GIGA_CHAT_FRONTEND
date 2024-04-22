@@ -336,49 +336,49 @@ const NavBar = ({ defaultValue }) => {
   return (
     <>
       {!mobileView.mobileView ? <>
-        <div className='w-[15vw] h-screen bg-black flex flex-col items-center'>
+                <div className='w-[15vw] h-screen bg-black flex flex-col items-center'>
           <div className='w-[100%] h-[10%] flex  items-center' >
             <Image src="/images/giga-coder-logo.png" width={150} height={150} alt="" className=' ml-5' />
           </div>
           <Link href="/pages/allchats" className='w-[100%] h-[10%] flex items-center ' >
             <div className='w-[100%] h-[100%] flex items-center px-5  parent ' >
-              <ForumIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "allchats" ? 'activeNavbar' : ''} `} />
-              <p className={`text-[#666666] font-thin child ${activeTab === "allchats" ? "activeNavbar" : ""} `} >All Chats</p>
+              <ForumIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "allchats" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "allchats" ? "active" : ""} `} >All Chats</p>
             </div>
           </Link>
           <Link href="/pages/groups" className='w-[100%] h-[10%] flex items-center ' >
             <div className='w-[100%] h-[100%] flex items-center px-5 parent' >
-              <GroupsIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "groups" ? 'activeNavbar' : ''} `} />
-              <p className={`text-[#666666] font-thin child ${activeTab === "groups" ? "activeNavbar" : ""} `} >Groups</p>
+              <GroupsIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "groups" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "groups" ? "active" : ""} `} >Groups</p>
             </div>
           </Link>
 
           <div className='w-[100%] h-[10%] flex items-center px-5 parent' onClick={() => handleTabClick("archieved")} >
             {/* <Link href="/pages/archieve" className='w-[100%] h-[100%] flex items-center ' > */}
-            <ArchiveIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "archieved" ? 'activeNavbar' : ''} `} />
-            <p className={`text-[#666666] font-thin child ${activeTab === "archieved" ? "activeNavbar" : ""} `}>Archived</p>
+            <ArchiveIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "archieved" ? 'active' : ''} `} />
+            <p className={`text-[#666666] font-thin child ${activeTab === "archieved" ? "active" : ""} `}>Archived</p>
             {/* </Link> */}
           </div>
           <Link href="/pages/askAi" className='w-[100%] h-[10%] flex items-center ' >
 
             <div className='w-[100%] h-[100%] flex items-center px-5 parent' >
-              <PsychologyIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "askAi" ? 'activeNavbar' : ''} `} />
-              <p className={`text-[#666666] font-thin child ${activeTab === "askAi" ? "activeNavbar" : ""} `}>
+              <PsychologyIcon sx={{ color: "#666666", width: "30%", height: "30%", marginBottom: "1%" }} className={`child  ${activeTab === "askAi" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "askAi" ? "active" : ""} `}>
                 Ask AI</p>
             </div>
           </Link>
           <Link href="/pages/videoCall" className='w-[100%] h-[10%] flex items-center ' >
 
             <div className='w-[100%] h-[100%] flex items-center px-5 parent' onClick={() => handleTabClick("videoCall")} >
-              <VideoChatIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "videoCall" ? 'activeNavbar' : ''} `} />
-              <p className={`text-[#666666] font-thin child ${activeTab === "videoCall" ? "activeNavbar" : ""} `}>Video Call</p>
+              <VideoChatIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "videoCall" ? 'active' : ''} `} />
+              <p className={`text-[#666666] font-thin child ${activeTab === "videoCall" ? "active" : ""} `}>Video Call</p>
 
             </div>
           </Link>
 
           <div className='w-[100%] h-[10%] flex items-center px-5 mt-auto parent' onClick={() => handleTabClick("settings")} >
-            <SettingsIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "settings" ? 'activeNavbar' : ''} `} />
-            <p className={`text-[#666666] font-thin child ${activeTab === "settings" ? "activeNavbar" : ""} `} >
+            <SettingsIcon sx={{ color: "#666666", width: "30%", height: "30%" }} className={`child  ${activeTab === "settings" ? 'active' : ''} `} />
+            <p className={`text-[#666666] font-thin child ${activeTab === "settings" ? "active" : ""} `} >
               Settings</p>
 
           </div>
