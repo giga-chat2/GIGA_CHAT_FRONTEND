@@ -431,6 +431,8 @@ export const MainComponent: React.FC = () => {
     const [seenPendingMessages, setSeenPendingMessages] = useState<object>({})
     const [lastestReceived, setLastestReceived] = useState<string>('')
     const [fileReceived, setFileReceived] = useState<any>()
+    const [newMessage, setNewMessage] = useState<string>('')
+
 
     useEffect(() => {
         if (handleNewComingUser) {
@@ -446,7 +448,7 @@ export const MainComponent: React.FC = () => {
                     if (data.receiver === currentUser?.username) {
                         console.log('receive_Message', 1)
                         if (data.sender === getCookieValue('currentSelectedUser')) {
-                                setMessages((prevMessages) => [{ message: data.message, isSender: false }, ...prevMessages])
+                            setNewMessage(data.message)
                             setRecievedMessage('recievedMessage', data.message, { path: '/' })
                         }
                         else if (selectedUser && selectedUser.some(user => user.username === data.sender)) {
@@ -539,12 +541,12 @@ export const MainComponent: React.FC = () => {
         console.log("got called", recievedMessage.recievedMessage)
         if (recievedMessage.recievedMessage && recievedMessage.recievedMessage !== previousMessage.previousMessage) {
             if (recievedMessage.recievedMessage !== '' && messages  ) {
-                // setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
+                setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
                 setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
                 setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
             } else {
                 setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
-                // setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
+                setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
                 setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
             }
         }
@@ -553,7 +555,7 @@ export const MainComponent: React.FC = () => {
         } else {
             setFirstTimeLoaded(true)
         }
-    }, [recievedMessage.recievedMessage]);
+    }, [newMessage]);
 
     const [animationTarget, setAnimationTarget] = useState(null);
 
