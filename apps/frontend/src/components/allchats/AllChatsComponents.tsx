@@ -647,11 +647,6 @@ export const MainComponent: React.FC = () => {
     const [firstTimeLoaded, setFirstTimeLoaded] = useState<boolean>(false)
     useEffect(() => {
         console.log("got called", recievedMessage.recievedMessage)
-        if (firstTimeLoaded) {
-            handleAiSuggestion("assistant", "Provide response in maximum 10 words for this : " + recievedMessage.recievedMessage)
-        } else {
-            setFirstTimeLoaded(true)
-        }
         if (recievedMessage.recievedMessage) {
             if (recievedMessage.recievedMessage !== '' && messages) {
                 setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
@@ -660,6 +655,11 @@ export const MainComponent: React.FC = () => {
                 setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
                 setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
             }
+        }
+        if (firstTimeLoaded) {
+            handleAiSuggestion("assistant", "Provide response in maximum 10 words for this : " + recievedMessage.recievedMessage)
+        } else {
+            setFirstTimeLoaded(true)
         }
     }, [recievedMessage.recievedMessage]);
 
