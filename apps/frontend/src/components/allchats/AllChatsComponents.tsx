@@ -652,12 +652,14 @@ export const MainComponent: React.FC = () => {
         } else {
             setFirstTimeLoaded(true)
         }
-        if (recievedMessage.recievedMessage !== '' && messages) {
-            setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
-            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
-        } else {
-            setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
-            setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
+        if (recievedMessage.recievedMessage) {
+            if (recievedMessage.recievedMessage !== '' && messages) {
+                setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])
+                setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
+            } else {
+                setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
+                setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
+            }
         }
     }, [recievedMessage.recievedMessage]);
 
