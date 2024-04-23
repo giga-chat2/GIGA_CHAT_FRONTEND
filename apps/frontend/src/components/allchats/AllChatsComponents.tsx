@@ -1058,8 +1058,8 @@ export const MainComponent: React.FC = () => {
 
             // Make a POST request to the server
             console.log(1)
-            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-            // const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', {roomId:roomId,sender:currentUser.username,receiver: selectedUser[index]?.username ,fileURL:getFileURL.data.fileURL } );
+            const getFileURL = await axios.post('https://giga-chat-2-frontend.vercel.app/getFileURL', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', {roomId:roomId,sender:currentUser.username,receiver: selectedUser[index]?.username ,fileURL:getFileURL.data.fileURL } );
             console.log(2)
 
             const data = response.data;
