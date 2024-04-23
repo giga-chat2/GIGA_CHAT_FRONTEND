@@ -1000,6 +1000,7 @@ export const MainComponent: React.FC = () => {
             }
         }
         mediaRecorder.onstop = async () => {
+            setPlaceholderVal('Sending Voice Note...')
             const audioBlob = new Blob(audioChunks.current, { type: 'audio/ogg' })
             const audioFile = new File([audioBlob], 'audio.ogg', { type: 'audio/ogg' });
 
@@ -1019,6 +1020,7 @@ export const MainComponent: React.FC = () => {
                     // socket.emit('voice_message', { audioURL: audioURL, roomId, sender: currentUser.username });
                     socket.emit('voice_message', { audioURL: audioURL, sender: currentUser.username, receiver: selectedUser[index]?.username })
                 }
+                setPlaceholderVal("Enter your message and hit 'Enter'")
 
             } catch (e) {
                 console.log(e)
@@ -1065,6 +1067,7 @@ export const MainComponent: React.FC = () => {
 
     const uploadFile = async (file: File) => {
         try {
+            setPlaceholderVal('Sending File...')
             // const formData = new FormData();
             // formData.append('file', file);
             // formData.append('roomId', roomId);
@@ -1091,6 +1094,7 @@ export const MainComponent: React.FC = () => {
                 console.log(fileURL,"fileURL")
                 socket.emit('voice_message', { fileURL: fileURL, sender: currentUser.username, receiver: selectedUser[index]?.username })
             }
+            setPlaceholderVal("Enter your message and hit 'Enter'")
             console.log(4)
 
 
