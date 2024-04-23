@@ -29,6 +29,8 @@ import { useRouter } from 'next/navigation'
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
+import { aiImageDB } from '@/config/firebase.config';
+import { getStorage, ref, getDownloadURL, uploadBytesResumable } from "firebase/storage";
 
 export const PopUpCover: React.FC = () => {
     const session = useSession()
