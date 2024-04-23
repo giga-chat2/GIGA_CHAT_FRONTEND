@@ -1077,6 +1077,8 @@ export const MainComponent: React.FC = () => {
             // Make a POST request to the server
             console.log(1)
             const fileURL = await getFileURL(file)
+            console.log(fileURL, "fileURL")
+
             const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', { roomId: roomId, sender: currentUser.username, receiver: selectedUser[index]?.username, fileURL: fileURL });
             // console.log(2)
 
