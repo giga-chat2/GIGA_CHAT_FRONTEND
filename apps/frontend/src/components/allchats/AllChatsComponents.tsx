@@ -1047,19 +1047,19 @@ export const MainComponent: React.FC = () => {
         try {
             const formData = new FormData();
             formData.append('file', file);
-            // formData.append('roomId', roomId);
-            // formData.append('sender', currentUser.username);
+            formData.append('roomId', roomId);
+            formData.append('sender', currentUser.username);
             for (var pair of formData.entries()) {
                 console.log(pair[0] + ', ' + pair[1]);
             }
-            // if (selectedUser) {
-            //     formData.append('receiver', selectedUser[index]?.username);
-            // }
+            if (selectedUser) {
+                formData.append('receiver', selectedUser[index]?.username);
+            }
 
             // Make a POST request to the server
             console.log(1)
-            const getFileURL = await axios.post('https://giga-chat-2-frontend.vercel.app/getFileURL', formData, { headers: { 'Content-Type': 'application/json' } })
-            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', {roomId:roomId,sender:currentUser.username,receiver: selectedUser[index]?.username ,fileURL:getFileURL.data.fileURL } );
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+            // const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', {roomId:roomId,sender:currentUser.username,receiver: selectedUser[index]?.username ,fileURL:getFileURL.data.fileURL } );
             console.log(2)
 
             const data = response.data;
@@ -1078,6 +1078,7 @@ export const MainComponent: React.FC = () => {
             console.error('Error uploading file', error);
         }
     };
+
 
     const fileInputHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
