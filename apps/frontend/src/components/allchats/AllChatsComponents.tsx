@@ -526,6 +526,7 @@ export const MainComponent: React.FC = () => {
                 removeFromOnlineUsers(dispStatus.dispStatus, currentUser?.username)
             }
             socket.off('check_RoomId');
+            socket.off('receive_Message');
         }
     }, [socket]);
 
