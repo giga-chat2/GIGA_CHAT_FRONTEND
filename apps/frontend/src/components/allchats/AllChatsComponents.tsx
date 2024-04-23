@@ -1042,31 +1042,49 @@ export const MainComponent: React.FC = () => {
         router.push(`allchats/${selectedUser[index].roomId}/${selectedUser[index].username}`)
 
     }
+    const getFileURL = async (file: File) => {
+        try {
+            const uniqueFileName = `${Date.now()}_${file.name}`;
+            const storageRef = ref(aiImageDB, `files/${uniqueFileName}`);
+
+            const metadata = {
+                contentType: file.type,
+            };
+
+            const snapshot = await uploadBytesResumable(storageRef, file, metadata);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+
+            return downloadURL;
+        } catch (error) {
+            console.error(error);
+            throw error;
+        }
+    }
 
     const uploadFile = async (file: File) => {
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('roomId', roomId);
-            formData.append('sender', currentUser.username);
-            for (var pair of formData.entries()) {
-                console.log(pair[0] + ', ' + pair[1]);
-            }
-            if (selectedUser) {
-                formData.append('receiver', selectedUser[index]?.username);
-            }
+            // const formData = new FormData();
+            // formData.append('file', file);
+            // formData.append('roomId', roomId);
+            // formData.append('sender', currentUser.username);
+            // for (var pair of formData.entries()) {
+            //     console.log(pair[0] + ', ' + pair[1]);
+            // }
+            // if (selectedUser) {
+            //     formData.append('receiver', selectedUser[index]?.username);
+            // }
 
             // Make a POST request to the server
             console.log(1)
-            const getFileURL = await axios.post('https://giga-chat-2-frontend.vercel.app/getFileURL', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', {roomId:roomId,sender:currentUser.username,receiver: selectedUser[index]?.username ,fileURL:getFileURL.data.fileURL } );
-            console.log(2)
+            const fileURL = await getFileURL(file)
+            const response = await axios.post('https://giga-chat-2-frontend.vercel.app/uploadFile', { roomId: roomId, sender: currentUser.username, receiver: selectedUser[index]?.username, fileURL: fileURL });
+            // console.log(2)
 
-            const data = response.data;
-            const fileURL = data.fileURL;
+            // const data = response.data;
+            // const fileURL = data.fileURL;
             setMessages((prevMessages) => [{ fileURL: fileURL, isSender: true }, ...prevMessages])
             if (socket) {
-                console.log(3)
+                console.log(fileURL,"fileURL")
                 socket.emit('voice_message', { fileURL: fileURL, sender: currentUser.username, receiver: selectedUser[index]?.username })
             }
             console.log(4)
@@ -1078,6 +1096,7 @@ export const MainComponent: React.FC = () => {
             console.error('Error uploading file', error);
         }
     };
+
 
 
     const fileInputHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
