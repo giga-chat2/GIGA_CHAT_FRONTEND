@@ -542,11 +542,7 @@ export const MainComponent: React.FC = () => {
         console.log("got called", recievedMessage.recievedMessage)
         if (recievedMessage.recievedMessage && recievedMessage.recievedMessage !== previousMessage.previousMessage) {
             if (recievedMessage.recievedMessage !== '' && messages  ) {
-            setMessages((prevMessages) => {
-                const newMessages = [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages];
-                newMessages.pop();
-                return newMessages;
-            });                
+                setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])             
                 setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
                 setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
             } else {
