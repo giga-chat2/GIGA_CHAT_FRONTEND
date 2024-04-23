@@ -542,6 +542,7 @@ export const MainComponent: React.FC = () => {
                 setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
                 setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
             } else {
+                setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
                 setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
                 setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
             }
