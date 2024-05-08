@@ -1005,7 +1005,7 @@ export const MainComponent: React.FC = () => {
                                 <div className=' flex w-[90%] h-[80%] border border-[#1e232c] rounded ' >
                                     <div className='w-[10%] h-[100%]  flex justify-center items-center ' >
                                         <div className='w-[50px] h-[50px] rounded-full border border-white overflow-hidden ' >
-                                            {selectedGroups[idx]?.profilePic ? <>
+                                            {selectedGroups[idx]?.profilePic && selectedGroups[idx]?.profilePic !== "undefined" ? <>
                                                 <img
                                                     src={`${selectedGroups[idx]?.profilePic}`}
                                                     alt="profile"
