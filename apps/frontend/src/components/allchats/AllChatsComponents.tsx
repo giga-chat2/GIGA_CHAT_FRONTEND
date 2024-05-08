@@ -537,27 +537,6 @@ export const MainComponent: React.FC = () => {
         } catch (e) { console.log(e) }
     }
 
-    const [previousMessage, setPreviousMessage] = useCookies(['previousMessage' as string])
-    useEffect(() => {
-        console.log("got called", recievedMessage.recievedMessage)
-        if (recievedMessage.recievedMessage && recievedMessage.recievedMessage !== previousMessage.previousMessage) {
-            if (recievedMessage.recievedMessage !== '' && messages  ) {
-                setMessages((prevMessages) => [{ message: recievedMessage.recievedMessage, isSender: false }, ...prevMessages])             
-                setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
-                setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
-            } else {
-                setPreviousMessage('previousMessage', recievedMessage.recievedMessage, { path: '/' })
-                setMessages([{ message: recievedMessage.recievedMessage, isSender: false }])
-                setOpenAiChats((prevChats) => [...prevChats, { role: "assistant", content: recievedMessage.recievedMessage }])
-            }
-        }
-        if (firstTimeLoaded) {
-            handleAiSuggestion("assistant", "Provide response in maximum 10 words for this : " + recievedMessage.recievedMessage)
-        } else {
-            setFirstTimeLoaded(true)
-        }
-    }, [newMessage]);
-
     const [animationTarget, setAnimationTarget] = useState(null);
 
     useEffect(() => {
