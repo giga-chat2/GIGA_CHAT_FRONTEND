@@ -539,10 +539,9 @@ main.sign-up-mode .carousel {
   font-size:large;
 }
 .searchWrapper{
-    width: 27vw !important;
+    /* width: 27vw !important; */
     height: 20% !important;
 }
-
 .multiSelectContainer li{
     background-color: #1e232c !important;
     color: white;
